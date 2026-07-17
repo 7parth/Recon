@@ -1,0 +1,36 @@
+# Environment variables — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.uv/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# LangGraph / SQLite checkpoints (dev)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
