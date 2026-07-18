@@ -82,6 +82,102 @@ The Job Application Agent is an autonomous, human-supervised system that finds j
 4. Application history in PostgreSQL accurately reflects real-world status (applied/failed/skipped) for 100% of processed listings.
 5. Match scoring correctly skips clearly mismatched listings (validated against a hand-labeled test set) with acceptable precision/recall.
 
-## Multi-Agent Extension
+## Technical Architecture
 
-The workflow is implemented as a supervisor-based multi-agent system. A Planner Agent coordinates specialized agents rather than performing all reasoning itself. Resume, Job and Company agents execute independently and share structured state through LangGraph before downstream agents perform matching, ATS optimization, tailoring, review and submission.
+### Stack
+
+| Layer | Technology |
+|---|---|
+| Orchestration | LangGraph `StateGraph` with checkpoint-based persistence |
+| LLM | NVIDIA AI Endpoints — `meta/llama-4-scout-17b-16e-instruct` (temp 0.2 extraction / 0.7 creative) |
+| Embeddings | `sentence-transformers` — `all-MiniLM-L6-v2`, local inference, no API cost |
+| Resume parsing | `pypdf` (PDF), `python-docx` (DOCX) |
+| JD fetching | `httpx` + `BeautifulSoup` — semantic landmark extraction |
+| Web search | `duckduckgo-search` — no API key required |
+| Browser automation | `playwright` (Chromium, sync API) |
+| API | FastAPI (async) |
+| Database | PostgreSQL via SQLAlchemy async |
+| Package manager | `uv` |
+
+### Agent Pipeline
+
+```
+START
+  │
+  ▼
+planner ──(error)──────────────────────────────────────────────► END
+  │
+  ├──► resume_agent ──┐   (parallel fan-out — run concurrently)
+  ├──► job_agent ─────┤
+  └──► company_agent ─┘
+                      │  (fan-in)
+                      ▼
+                 match_agent  ── (score < 0.65) ──────────────► END
+                      │
+                 ats_agent
+                      │
+              tailoring_agent ◄──────────── (rejected, re-tailor loop)
+                      │                              ▲
+              cover_letter_agent                     │
+                      │                              │
+                human_review ── (rejected + feedback)┘
+                [INTERRUPT]
+                      │
+                  (approved)
+                      │
+                apply_agent
+                      │
+               tracking_agent
+                      │
+                     END
+```
+
+### State (`ApplicationState` TypedDict)
+
+All agents share a single typed state object. Each agent reads specific fields and returns a partial dict that LangGraph merges in:
+
+| Field | Type | Written by |
+|---|---|---|
+| `resume_raw` | `str` | API (upload) |
+| `job_url` | `str` | API (input) |
+| `resume_profile` | `CandidateProfile` | `resume_agent` |
+| `job_profile` | `JobProfile` | `job_agent` |
+| `company_profile` | `CompanyProfile` | `company_agent` |
+| `match_result` | `MatchResult` | `match_agent` |
+| `ats_report` | `ATSReport` | `ats_agent` |
+| `tailored_resume` | `TailoredResume` | `tailoring_agent` |
+| `cover_letter` | `CoverLetter` | `cover_letter_agent` |
+| `approval_status` | `"approved" \| "rejected" \| "pending"` | API (resume) |
+| `rejection_feedback` | `str` | API (on reject) |
+| `submission_status` | `"applied" \| "failed" \| "skipped"` | `apply_agent` |
+| `error` | `str` | any agent (non-fatal) |
+
+### Key Design Decisions
+
+- **Fixed routing, not dynamic planner**: The graph topology is statically compiled. The planner node validates inputs; routing logic lives in `router.py` as pure functions. Simpler to debug and test than a dynamic LLM-driven supervisor.
+- **Two-stage match scoring**: Embeddings cosine similarity as a cheap pre-filter (early exit below 0.325), then LLM detailed scoring for borderline/good matches. Final score = 70% LLM + 30% embeddings.
+- **`interrupt_before=[HUMAN_REVIEW]`**: LangGraph pauses the graph before `human_review_agent` runs on every pass. The FastAPI layer surfaces the draft documents, waits for the user decision, then resumes the graph via `graph.invoke()` with the checkpoint's `thread_id`.
+- **Conditional prompt selection in tailoring/cover letter**: The same node handles both first-run and re-tailor (after rejection) by branching on `state["rejection_feedback"]`. No extra graph nodes needed.
+- **ATS dispatcher**: `apply_agent` detects the ATS platform from the URL and delegates to a per-platform automation module. Adding a new ATS = implement one `submit()` function, add one dict entry.
+
+### Repository Layout
+
+```
+backend/
+  app/
+    graph/
+      agents/       — 11 agent nodes (planner → tracking)
+      prompts/      — prompt templates (separated from agent logic)
+      tools/        — resume_parser, jd_parser, embeddings, llm, browser, search
+      state.py      — ApplicationState TypedDict + 7 Pydantic models
+      constants.py  — node name constants, routing literals
+      builder.py    — StateGraph construction + graph singleton
+      router.py     — conditional edge functions
+    automation/     — per-ATS Playwright submit() functions
+    api/            — FastAPI routes and schemas
+    db/             — SQLAlchemy models and repositories
+    services/       — business logic layer
+    workers/        — Celery background tasks (future)
+    vectorstore/    — FAISS embedding index (future)
+```
+
