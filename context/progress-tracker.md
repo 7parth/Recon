@@ -6,75 +6,68 @@ Implementation
 
 ## Current Goal
 
-Implement backend agents and API layer following the scaffolded structure
+Database layer — SQLAlchemy async models + Alembic migrations for application history persistence
 
 ## Completed
 
 - Defined specialized agent architecture
 - Added shared ApplicationState
 - Preserved mandatory human review invariant
-- **Feature 01: Backend directory & file scaffold** — full `backend/app/` tree created (graph, agents, prompts, tools, automation, api, db, services, vectorstore, workers, utils, tests)
+- **Feature 01: Backend directory & file scaffold** — full `backend/app/` tree created
 - `requirements.txt` generated and all 132 packages installed via `uv add`
-- **`app/graph/constants.py`** — all node name constants and routing literals defined (`PLANNER`, `RESUME_AGENT`, …, `TRACKING_AGENT`, `APPROVED`, `REJECTED`, `MATCH_SCORE_THRESHOLD`)
-- **`app/graph/state.py`** — `ApplicationState` TypedDict complete with all 7 Pydantic models (`CandidateProfile`, `JobProfile`, `CompanyProfile`, `MatchResult`, `ATSReport`, `TailoredResume`, `CoverLetter`); fixed forward-reference ordering and added missing `CompanyProfile`
-- **`app/graph/tools/llm.py`** — LLM client initialised (NVIDIA AI Endpoints, `meta/llama-4-scout-17b-16e-instruct`)
-- **`app/graph/tools/resume_parser.py`** — stub documented (`parse_pdf`, `parse_docx` via pypdf / python-docx)
-- **`app/graph/tools/jd_parser.py`** — stub documented (`fetch_jd` via httpx + BeautifulSoup)
-- **`app/graph/tools/embeddings.py`** — `get_embeddings` (sentence-transformers, lazy singleton via `lru_cache`), `compute_similarity` (pure-Python cosine), `score_resume_jd` helper
-- **`app/graph/agents/planner.py`** — Planner Agent (supervisor entry node): validates inputs, seeds `approval_status`, clears stale errors; no LLM call
-- **`app/graph/router.py`** — all conditional edge functions: `route_after_planner` (parallel fan-out), `route_after_match` (threshold gate), `route_after_review` (approve/reject/re-tailor), `route_after_apply`
-- **`app/graph/builder.py`** — full `StateGraph` assembled: 11 nodes registered, parallel parsing fan-out, match gate, `interrupt_before=[HUMAN_REVIEW]`, rejection re-tailor loop, `graph` singleton exported
+
+### Graph Core
+- **`app/graph/constants.py`** — node name constants, routing literals, `MATCH_SCORE_THRESHOLD`
+- **`app/graph/state.py`** — `ApplicationState` TypedDict + 7 Pydantic models; `CompanyProfile` added
+- **`app/graph/router.py`** — `route_after_planner` (fan-out), `route_after_match`, `route_after_review`, `route_after_apply`
+- **`app/graph/builder.py`** — full `StateGraph`: 11 nodes, parallel fan-out, `interrupt_before=[HUMAN_REVIEW]`, re-tailor loop, `graph` singleton
+
+### Tool Layer
+- **`app/graph/tools/llm.py`** — NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2)
 - **`app/graph/tools/resume_parser.py`** — `parse_pdf` (pypdf + `io.BytesIO`), `parse_docx` (python-docx), `parse_resume` dispatcher
-- **`app/graph/tools/jd_parser.py`** — `fetch_jd` (httpx + BeautifulSoup, semantic landmark selection, noise removal), `normalize_jd` for raw-text input
-- **`app/graph/tools/embeddings.py`** *(implemented)* — `get_embeddings`, `compute_similarity`, `score_resume_jd`
+- **`app/graph/tools/jd_parser.py`** — `fetch_jd` (httpx + BeautifulSoup), `normalize_jd`
+- **`app/graph/tools/embeddings.py`** — `get_embeddings` (sentence-transformers, `lru_cache` singleton), `compute_similarity`, `score_resume_jd`
+- **`app/graph/tools/browser.py`** — `BrowserSession` context manager (Playwright), `safe_fill`, `safe_click`, `upload_file`, `get_page_text`
+- **`app/graph/tools/search.py`** — `search_web` (DuckDuckGo), `SearchResult` dataclass, `search_company`, `search_jobs`, `fetch_first_result`
 
-- **`app/graph/prompts/resume.py`** — system + user prompt templates for resume extraction
-- **`app/graph/agents/resume_agent.py`** — `resume_agent_node`: `with_structured_output(CandidateProfile)`, SystemMessage + HumanMessage pattern
-- **`app/graph/prompts/job.py`** — prompt targeting `required_skills`, `responsibilities`, `experience_required`
-- **`app/graph/agents/job_agent.py`** — `job_agent_node`: URL-vs-raw-text detection, fetch via `jd_parser`, `with_structured_output(JobProfile)`
-- **`app/graph/prompts/company.py`** — prompt targeting `name`, `industry`, `size`, `culture_notes`
-- **`app/graph/agents/company_agent.py`** — `company_agent_node`: same JD fetch as job_agent (independent — parallel nodes cannot share state mid-flight)
+### Agents (all 11)
+- **`planner.py`** — input validation, seeds `approval_status`, no LLM
+- **`resume_agent.py`** — `with_structured_output(CandidateProfile)`, SystemMessage + HumanMessage
+- **`job_agent.py`** — URL-vs-raw-text detection, `with_structured_output(JobProfile)`
+- **`company_agent.py`** — independent JD fetch (parallel node isolation)
+- **`match_agent.py`** — two-stage scoring (embeddings pre-filter → LLM), 70/30 blend
+- **`ats_agent.py`** — keyword coverage audit, feeds tailoring agent
+- **`tailoring_agent.py`** — conditional prompt (first-run vs re-tailor on `rejection_feedback`)
+- **`cover_letter_agent.py`** — `llm.bind(temperature=0.7)`, tone-matched to company culture
+- **`human_review_agent.py`** — validation passthrough post-interrupt, no LLM
+- **`apply_agent.py`** — ATS dispatcher (`_detect_platform`), `"skipped"` for unsupported platforms
+- **`tracking_agent.py`** — terminal node, structured outcome log, UTC timestamp
 
-- **`app/graph/prompts/match.py`** — two-profile prompt (candidate + job as readable text), concrete example instructions for specificity
-- **`app/graph/agents/match_agent.py`** — `match_agent_node`: two-stage scoring (embeddings pre-filter → LLM detailed), score blending (70% LLM + 30% embeddings), early-exit on obvious mismatch
-- **`app/graph/prompts/ats.py`** — keyword ratio + section score + gap recommendations prompt
-- **`app/graph/agents/ats_agent.py`** — `ats_agent_node`: audits *original* resume against `job_profile.required_skills`, bulleted skill list formatting, keyword_match clamping
+### Automation Stubs
+- **`app/automation/`** — `greenhouse.py`, `lever.py`, `workday.py`, `ashby.py`, `smartrecruiters.py` — correct `submit()` signature; full Playwright flows deferred to Sprint 3
 
-- **`app/graph/prompts/tailoring.py`** — two variants: first-run (ATS gaps + strengths) and re-tailor (user feedback as top priority)
-- **`app/graph/agents/tailoring_agent.py`** — `tailoring_agent_node`: conditional prompt selection on `rejection_feedback`, clears feedback after re-tailor
-- **`app/graph/prompts/cover_letter.py`** — two variants with tone-matching rules (startup vs enterprise), 250–350 word constraint
-- **`app/graph/agents/cover_letter_agent.py`** — `cover_letter_agent_node`: `llm.bind(temperature=0.7)` for creative prose, graceful fallback on missing `company_profile`
-
-- **`app/graph/agents/human_review_agent.py`** — validation passthrough post-interrupt; no LLM; documents the full 9-step interrupt/resume lifecycle
-- **`app/graph/agents/apply_agent.py`** — ATS dispatcher pattern (`_detect_platform` + lazy-imported submit functions), `"skipped"` status for unsupported platforms, non-fatal failure
-- **`app/graph/agents/tracking_agent.py`** — terminal node; structured grep-able outcome log, UTC timestamp for DB stamping
-
-- **`app/graph/tools/browser.py`** — `BrowserSession` context manager (Playwright lifecycle, UA spoofing), `safe_fill`, `safe_click`, `upload_file` (temp-file pattern), `get_page_text`
-- **`app/graph/tools/search.py`** — `search_web` (DuckDuckGo, no API key), `SearchResult` dataclass, `search_company`, `search_jobs`, `fetch_first_result`
-- **`app/automation/greenhouse.py`** + `lever.py` + `workday.py` + `ashby.py` + `smartrecruiters.py` — stubbed with correct `submit(url, resume_text, cover_letter_text) -> bool` signature; full Playwright flows deferred to Sprint 3
-
+### FastAPI Layer ✅ Smoke-tested
 - **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
 - **`app/api/routes/health.py`** — `GET /health`
-- **`app/api/routes/application.py`** — `POST /resume/parse`, `POST /runs/start` (BackgroundTasks + thread_id), `GET /runs/{id}/status`
-- **`app/api/routes/review.py`** — `GET /runs/{id}/review` (`graph.get_state()` checkpoint read), `POST /runs/{id}/approve` (graph resume via `graph.invoke()` with state_update)
-- **`app/main.py`** — FastAPI app factory, CORS middleware, router registration under `/api/v1`, startup/shutdown hooks
-- **`context/project-overview.md`** — added Technical Architecture section (stack table, pipeline diagram, state table, key decisions, repo layout)
+- **`app/api/routes/application.py`** — `POST /resume/parse`, `POST /runs/start` (BackgroundTasks + `thread_id`), `GET /runs/{id}/status`
+- **`app/api/routes/review.py`** — `GET /runs/{id}/review` (`graph.get_state()`), `POST /runs/{id}/approve` (`graph.invoke()` resume)
+- **`app/main.py`** — app factory, CORS, `/api/v1` prefix, startup/shutdown hooks
+- **Smoke test passed** — `uvicorn` started cleanly; `POST /api/v1/resume/parse` returned `200 OK` with 5,418 chars extracted from a real PDF
+
+### Docs
+- **`context/project-overview.md`** — Technical Architecture section: stack table, pipeline diagram, state table, key decisions, repo layout
 
 ## In Progress
 
-- Database models (`app/db/models/`) — SQLAlchemy async
+- Database layer (`app/db/`)
 
 ## Next Up
 
-- **Database** — `app/db/database.py`, `app/db/models/application.py`, Alembic migrations
-- **End-to-end smoke test** — run graph with mock state, verify all nodes fire
+- **`app/db/database.py`** — SQLAlchemy async engine + session factory
+- **`app/db/models/application.py`** — `ApplicationRecord` ORM model
+- **Alembic migrations** — `alembic init`, initial migration
+- **End-to-end graph smoke test** — invoke full graph with real resume + JD URL
 - **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
-
-## Next Up
-
-- **Database models & migrations** — `app/db/`
-- **Automation stubs** — `app/automation/greenhouse.py`, `lever.py`, `workday.py`, `ashby.py`
-- **End-to-end smoke test** — run graph with mock state, verify all nodes fire
 
 ## Open Questions
 
@@ -83,24 +76,26 @@ Implement backend agents and API layer following the scaffolded structure
 
 ## Architecture Decisions
 
-- Supervisor (Planner Agent) controls execution.
+- Supervisor (Planner Agent) controls execution via fixed routing, not dynamic LLM dispatch.
 - Specialized agents own one responsibility each.
-- Human review remains mandatory before Apply Agent.
-- Backend scaffolded under `backend/app/` matching Feature 01 spec exactly.
-- LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2, top_p=0.7).
+- Human review remains mandatory before Apply Agent (`interrupt_before=[HUMAN_REVIEW]`).
+- Two-stage match scoring: embeddings floor check → LLM detailed, 70/30 blended score.
+- API schema ≠ graph state models — deliberate separation for independent evolution.
+- LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2 extraction / 0.7 creative).
 
 ## Git
 
-- `main` — stable, scaffolded baseline (2 commits)
-- `dev`  — active development branch; PR open at github.com/7parth/Recon/pull/new/dev
+- `main` — stable baseline (2 commits: scaffold + gitignore)
+- `dev`  — active development (5 commits: agents, tools, browser/search, FastAPI, fixes)
+  - `00a2cf4` — tool layer + parsing agents
+  - `f332d97` — remaining agents (tailoring, review, apply, tracking)
+  - `2348fbd` — browser.py, search.py, automation stubs
+  - `fcbc574` — FastAPI layer + project-overview update
+  - `HEAD`    — fix: issue 01 (duckduckgo-search dep fix, NVIDIA_MODEL env var)
 
 ## Session Notes
 
-Refactored design from sequential workflow to multi-agent architecture without changing product goals.
-Backend scaffold (empty files only, no code) created from Feature 01 spec; all dependencies installed.
-`state.py` fixed: `CompanyProfile` was missing; all Pydantic models reordered before `ApplicationState`; `from __future__ import annotations` added.
-`constants.py` fully defined with node names, routing literals, and match threshold.
-LLM client wired in `tools/llm.py`; tool stubs documented in `resume_parser.py`, `jd_parser.py`, `embeddings.py`.
-Tool layer fully implemented: `resume_parser`, `jd_parser`, `embeddings`.
-Agents implemented: `planner`, `resume_agent`, `job_agent`, `company_agent`, `match_agent`, `ats_agent`.
-All work pushed to `dev` branch — commit `00a2cf4`.
+Entire backend graph + API layer implemented in one session.
+Server smoke-tested live: uvicorn started, `/resume/parse` hit with real PDF → 200 OK, 5,418 chars extracted.
+**Issue 01 Resolved:** Fixed missing `duckduckgo-search` dependency. Moved hardcoded LLM model to `NVIDIA_MODEL` env var to address deprecation warning gracefully.
+All work on `dev` branch — ready for DB layer then PR to `main`.
