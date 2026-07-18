@@ -53,10 +53,22 @@ Implement backend agents and API layer following the scaffolded structure
 - **`app/graph/tools/search.py`** — `search_web` (DuckDuckGo, no API key), `SearchResult` dataclass, `search_company`, `search_jobs`, `fetch_first_result`
 - **`app/automation/greenhouse.py`** + `lever.py` + `workday.py` + `ashby.py` + `smartrecruiters.py` — stubbed with correct `submit(url, resume_text, cover_letter_text) -> bool` signature; full Playwright flows deferred to Sprint 3
 
+- **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
+- **`app/api/routes/health.py`** — `GET /health`
+- **`app/api/routes/application.py`** — `POST /resume/parse`, `POST /runs/start` (BackgroundTasks + thread_id), `GET /runs/{id}/status`
+- **`app/api/routes/review.py`** — `GET /runs/{id}/review` (`graph.get_state()` checkpoint read), `POST /runs/{id}/approve` (graph resume via `graph.invoke()` with state_update)
+- **`app/main.py`** — FastAPI app factory, CORS middleware, router registration under `/api/v1`, startup/shutdown hooks
+- **`context/project-overview.md`** — added Technical Architecture section (stack table, pipeline diagram, state table, key decisions, repo layout)
+
 ## In Progress
 
-- FastAPI entrypoint (`app/main.py`)
-- API routes (`app/api/routes/`)
+- Database models (`app/db/models/`) — SQLAlchemy async
+
+## Next Up
+
+- **Database** — `app/db/database.py`, `app/db/models/application.py`, Alembic migrations
+- **End-to-end smoke test** — run graph with mock state, verify all nodes fire
+- **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
 
 ## Next Up
 
@@ -66,8 +78,8 @@ Implement backend agents and API layer following the scaffolded structure
 
 ## Open Questions
 
-- Dynamic planner vs fixed routing?
-- Parallel execution strategy for independent agents (Resume + Job + Company can run concurrently).
+- ~~Dynamic planner vs fixed routing?~~ **Resolved**: fixed routing (statically compiled graph, pure-function routers in `router.py`)
+- ~~Parallel execution strategy?~~ **Resolved**: LangGraph native fan-out via `route_after_planner` returning a list
 
 ## Architecture Decisions
 
