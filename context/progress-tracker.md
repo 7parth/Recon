@@ -49,6 +49,10 @@ Implement backend agents and API layer following the scaffolded structure
 - **`app/graph/agents/apply_agent.py`** — ATS dispatcher pattern (`_detect_platform` + lazy-imported submit functions), `"skipped"` status for unsupported platforms, non-fatal failure
 - **`app/graph/agents/tracking_agent.py`** — terminal node; structured grep-able outcome log, UTC timestamp for DB stamping
 
+- **`app/graph/tools/browser.py`** — `BrowserSession` context manager (Playwright lifecycle, UA spoofing), `safe_fill`, `safe_click`, `upload_file` (temp-file pattern), `get_page_text`
+- **`app/graph/tools/search.py`** — `search_web` (DuckDuckGo, no API key), `SearchResult` dataclass, `search_company`, `search_jobs`, `fetch_first_result`
+- **`app/automation/greenhouse.py`** + `lever.py` + `workday.py` + `ashby.py` + `smartrecruiters.py` — stubbed with correct `submit(url, resume_text, cover_letter_text) -> bool` signature; full Playwright flows deferred to Sprint 3
+
 ## In Progress
 
 - FastAPI entrypoint (`app/main.py`)
