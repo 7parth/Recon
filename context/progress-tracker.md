@@ -40,19 +40,25 @@ Implement backend agents and API layer following the scaffolded structure
 - **`app/graph/prompts/ats.py`** — keyword ratio + section score + gap recommendations prompt
 - **`app/graph/agents/ats_agent.py`** — `ats_agent_node`: audits *original* resume against `job_profile.required_skills`, bulleted skill list formatting, keyword_match clamping
 
+- **`app/graph/prompts/tailoring.py`** — two variants: first-run (ATS gaps + strengths) and re-tailor (user feedback as top priority)
+- **`app/graph/agents/tailoring_agent.py`** — `tailoring_agent_node`: conditional prompt selection on `rejection_feedback`, clears feedback after re-tailor
+- **`app/graph/prompts/cover_letter.py`** — two variants with tone-matching rules (startup vs enterprise), 250–350 word constraint
+- **`app/graph/agents/cover_letter_agent.py`** — `cover_letter_agent_node`: `llm.bind(temperature=0.7)` for creative prose, graceful fallback on missing `company_profile`
+
+- **`app/graph/agents/human_review_agent.py`** — validation passthrough post-interrupt; no LLM; documents the full 9-step interrupt/resume lifecycle
+- **`app/graph/agents/apply_agent.py`** — ATS dispatcher pattern (`_detect_platform` + lazy-imported submit functions), `"skipped"` status for unsupported platforms, non-fatal failure
+- **`app/graph/agents/tracking_agent.py`** — terminal node; structured grep-able outcome log, UTC timestamp for DB stamping
+
 ## In Progress
 
-- Tailoring Agent (`app/graph/agents/tailoring_agent.py`)
-- Cover Letter Agent (`app/graph/agents/cover_letter_agent.py`)
+- FastAPI entrypoint (`app/main.py`)
+- API routes (`app/api/routes/`)
 
 ## Next Up
 
-- **Remaining Agents**
-  - Human Review Agent (`app/graph/agents/human_review_agent.py`)
-  - Apply Agent (`app/graph/agents/apply_agent.py`)
-  - Tracking Agent (`app/graph/agents/tracking_agent.py`)
-- **FastAPI entrypoint & routes** — `app/main.py`, `app/api/routes/`
 - **Database models & migrations** — `app/db/`
+- **Automation stubs** — `app/automation/greenhouse.py`, `lever.py`, `workday.py`, `ashby.py`
+- **End-to-end smoke test** — run graph with mock state, verify all nodes fire
 
 ## Open Questions
 
@@ -67,6 +73,11 @@ Implement backend agents and API layer following the scaffolded structure
 - Backend scaffolded under `backend/app/` matching Feature 01 spec exactly.
 - LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2, top_p=0.7).
 
+## Git
+
+- `main` — stable, scaffolded baseline (2 commits)
+- `dev`  — active development branch; PR open at github.com/7parth/Recon/pull/new/dev
+
 ## Session Notes
 
 Refactored design from sequential workflow to multi-agent architecture without changing product goals.
@@ -74,3 +85,6 @@ Backend scaffold (empty files only, no code) created from Feature 01 spec; all d
 `state.py` fixed: `CompanyProfile` was missing; all Pydantic models reordered before `ApplicationState`; `from __future__ import annotations` added.
 `constants.py` fully defined with node names, routing literals, and match threshold.
 LLM client wired in `tools/llm.py`; tool stubs documented in `resume_parser.py`, `jd_parser.py`, `embeddings.py`.
+Tool layer fully implemented: `resume_parser`, `jd_parser`, `embeddings`.
+Agents implemented: `planner`, `resume_agent`, `job_agent`, `company_agent`, `match_agent`, `ats_agent`.
+All work pushed to `dev` branch — commit `00a2cf4`.
