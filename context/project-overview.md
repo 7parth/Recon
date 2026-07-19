@@ -42,7 +42,7 @@ The Job Application Agent is an autonomous, human-supervised system that finds j
 
 - Mandatory approval checkpoint before any submission
 - Reject-with-feedback loop that re-runs tailoring with the user's notes
-- Persisted review queue (survives restarts via LangGraph checkpointing)
+- Persisted review queue (survives restarts via LangGraph checkpoints stored in Supabase PostgreSQL)
 
 ### Application Automation
 
@@ -64,7 +64,7 @@ The Job Application Agent is an autonomous, human-supervised system that finds j
 - Resume/JD parsing, matching, and tailoring via LLM
 - Human approval checkpoint before submission
 - Browser automation for Greenhouse- and Lever-hosted application forms
-- Application history and status tracking in PostgreSQL
+- Application history and status tracking in Supabase PostgreSQL + Storage
 
 ### Out of Scope
 
@@ -79,7 +79,7 @@ The Job Application Agent is an autonomous, human-supervised system that finds j
 1. A user can upload a resume and, from a single job URL, receive a tailored resume + cover letter ready for review in under 2 minutes.
 2. The human-review checkpoint correctly blocks submission until explicit approval is recorded, verified across at least 20 test runs with no bypass.
 3. The agent successfully completes end-to-end submission (form-filled and confirmed) on both Greenhouse and Lever test listings with a >90% success rate.
-4. Application history in PostgreSQL accurately reflects real-world status (applied/failed/skipped) for 100% of processed listings.
+4. Application history persisted in Supabase PostgreSQL accurately reflects real-world status (applied/failed/skipped) for 100% of processed listings.
 5. Match scoring correctly skips clearly mismatched listings (validated against a hand-labeled test set) with acceptable precision/recall.
 
 ## Technical Architecture
@@ -96,7 +96,9 @@ The Job Application Agent is an autonomous, human-supervised system that finds j
 | Web search | `duckduckgo-search` — no API key required |
 | Browser automation | `playwright` (Chromium, sync API) |
 | API | FastAPI (async) |
-| Database | PostgreSQL via SQLAlchemy async |
+| Database | Supabase PostgreSQL (hosted) |
+| ORM | SQLAlchemy Async |
+| Storage | Supabase Storage (resumes, tailored resumes, cover letters) |
 | Package manager | `uv` |
 
 ### Agent Pipeline
@@ -175,7 +177,8 @@ backend/
       router.py     — conditional edge functions
     automation/     — per-ATS Playwright submit() functions
     api/            — FastAPI routes and schemas
-    db/             — SQLAlchemy models and repositories
+    db/             — SQLAlchemy models, Supabase client, repositories
+    storage/        — Supabase Storage wrappers (resume, document upload)
     services/       — business logic layer
     workers/        — Celery background tasks (future)
     vectorstore/    — FAISS embedding index (future)
