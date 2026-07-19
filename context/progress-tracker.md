@@ -72,17 +72,22 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 - **`backend/.env.example`** — Supabase env vars added
 - **Alembic migrations** — initial schema created
 
+### Supabase API Integration ✅ (Issue 02 - API Layer)
+- **`app/main.py`** — Use FastAPI `lifespan` to initialize AsyncPostgresSaver globally
+- **`app/graph/builder.py`** — Replaced global graph singleton with dynamic lifespan compilation
+- **`app/api/routes/application.py`** — Removed in-memory `_runs` dict. Implemented `ApplicationRepository` with async sessions. Rewrote background tasks using `ainvoke`.
+- **`/resume/parse`** — Integrated `StorageService` to upload raw resumes to Supabase Storage and return public URL.
+- **`app/api/routes/review.py`** — Removed `_runs`. Human review endpoints now fetch checkpoint state directly via `app.state.graph.aget_state()` and update the DB accordingly.
+
 ## In Progress
 
-- **Wire Supabase DB & Storage to API Layer**
-  - Update `app/main.py` lifecycle to initialize DB pool and checkpointer
-  - Replace in-memory `_runs` dict in `app/api/routes/application.py` and `review.py` with repository calls
-  - Upload user's resume file to Supabase Storage inside `/resume/parse` or a new endpoint
+- **End-to-end graph smoke test** 
+  - Invoke full graph with real resume + JD URL and DB persistence
+  - Verify documents correctly store in Supabase Storage buckets
+  - Verify graph successfully suspends at HUMAN_REVIEW and resumes properly
 
 ## Next Up
 
-- **Supabase project creation** — user action: populate `.env` with actual Supabase credentials (URL, keys, DB connection string)
-- **End-to-end graph smoke test** — invoke full graph with real resume + JD URL and DB persistence
 - **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
 
 ## Open Questions

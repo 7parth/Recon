@@ -40,6 +40,25 @@ def create_app() -> FastAPI:
       - Avoids circular imports: routers import from app, not from main.
       - Standard FastAPI pattern for production apps.
     """
+    # ── Lifespan (Startup / Shutdown) ─────────────────────────────────────────
+    from contextlib import asynccontextmanager
+    from app.services.checkpoint_service import get_checkpointer
+    from app.graph.builder import build_graph
+
+    @asynccontextmanager
+    async def lifespan(app_instance: FastAPI):
+        logger.info("Recon API starting up...")
+        logger.info("Docs available at http://localhost:8000/docs")
+        
+        # Initialize LangGraph Checkpoint Service (Supabase Postgres)
+        # This manages a connection pool scoped to the app lifecycle
+        async with get_checkpointer() as checkpointer:
+            app_instance.state.checkpointer = checkpointer
+            app_instance.state.graph = build_graph(checkpointer=checkpointer)
+            yield
+
+        logger.info("Recon API shutting down")
+
     app = FastAPI(
         title="Recon — Job Application Agent API",
         description=(
@@ -50,6 +69,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     # ── CORS ─────────────────────────────────────────────────────────────────
@@ -69,16 +89,6 @@ def create_app() -> FastAPI:
     app.include_router(health.router)                        # GET /health
     app.include_router(application.router, prefix="/api/v1") # POST /api/v1/runs/start, etc.
     app.include_router(review.router,      prefix="/api/v1") # GET  /api/v1/runs/{id}/review, etc.
-
-    # ── Startup / shutdown events ─────────────────────────────────────────────
-    @app.on_event("startup")
-    async def on_startup():
-        logger.info("Recon API starting up...")
-        logger.info("Docs available at http://localhost:8000/docs")
-
-    @app.on_event("shutdown")
-    async def on_shutdown():
-        logger.info("Recon API shutting down")
 
     return app
 

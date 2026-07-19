@@ -160,5 +160,4 @@ def build_graph(checkpointer=None):
     )
 
 
-# Singleton for use by FastAPI routes (in-memory checkpointer for dev)
-graph = build_graph()
+
