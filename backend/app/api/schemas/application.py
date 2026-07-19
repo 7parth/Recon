@@ -30,6 +30,10 @@ class RunRequest(BaseModel):
         description="Plain text of the candidate's resume (parse via /resume/parse first)",
         min_length=100,
     )
+    resume_storage_url: Optional[str] = Field(
+        None,
+        description="Public URL to the uploaded resume file in Supabase Storage",
+    )
     job_url: str = Field(
         ...,
         description="Job listing URL (e.g. https://boards.greenhouse.io/acme/jobs/123) "
@@ -92,5 +96,6 @@ class RunStatus(BaseModel):
 class ResumeParseResponse(BaseModel):
     """Result of parsing an uploaded resume file."""
     resume_text: str
+    resume_storage_url: Optional[str] = None
     char_count: int
     message: str = "Resume parsed successfully. Use resume_text in /runs/start."

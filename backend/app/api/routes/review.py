@@ -26,9 +26,8 @@ How the interrupt/resume works end-to-end:
 """
 
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 
-from app.graph.builder import graph
 from app.api.schemas.application import (
     ApproveRequest,
     ReviewPayload,
@@ -36,42 +35,36 @@ from app.api.schemas.application import (
     MatchSummary,
 )
 
+from app.db.database import get_async_session
+from app.db.repositories.application_repo import ApplicationRepository
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["review"])
 
-# Import the run registry from application.py to share state.
-# In production this would be a DB, but for now we share the dict.
-from app.api.routes.application import _runs
-
 
 @router.get("/runs/{thread_id}/review", response_model=ReviewPayload)
-async def get_review(thread_id: str):
+async def get_review(thread_id: str, request: Request):
     """
     Fetch the tailored documents awaiting human approval.
-
-    Only valid when the run's status is "awaiting_review".
-    Reads the LangGraph checkpoint state using graph.get_state().
-
-    New concept — graph.get_state():
-      This reads the latest saved checkpoint for a thread WITHOUT running
-      any nodes.  It's a pure state read — cheap, safe to call multiple times.
-      The returned StateSnapshot has a .values dict with the full graph state.
+    Reads the LangGraph checkpoint state using request.app.state.graph.aget_state().
     """
-    run = _runs.get(thread_id)
-    if not run:
-        raise HTTPException(status_code=404, detail=f"No run found for thread_id={thread_id}")
+    async with get_async_session() as session:
+        repo = ApplicationRepository(session)
+        run = await repo.get_by_thread_id(thread_id)
+        if not run:
+            raise HTTPException(status_code=404, detail=f"No run found for thread_id={thread_id}")
 
-    if run["status"] != "awaiting_review":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Run is not awaiting review (status={run['status']}). "
-                   "Wait for status=awaiting_review before fetching review.",
-        )
+        if run.status != "pending_review":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Run is not awaiting review (status={run.status}). "
+                       "Wait for status=awaiting_review before fetching review.",
+            )
 
     config = {"configurable": {"thread_id": thread_id}}
 
     # Read checkpoint state without running any nodes
-    snapshot = graph.get_state(config)
+    snapshot = await request.app.state.graph.aget_state(config)
     state = snapshot.values
 
     # Extract required fields — these must be present if we're at HUMAN_REVIEW
@@ -109,36 +102,34 @@ async def get_review(thread_id: str):
 async def submit_review_decision(
     thread_id: str,
     decision: ApproveRequest,
+    request: Request,
     background_tasks: BackgroundTasks,
 ):
     """
     Submit the human approval or rejection decision.
-
-    On approval:   graph resumes → apply_agent → tracking_agent → END
-    On rejection:  graph resumes → tailoring_agent (re-tailor) → cover_letter
-                   → HUMAN_REVIEW interrupt again (new review cycle)
-
-    The graph is resumed by calling graph.invoke() with the SAME thread_id
-    and an updated state dict.  LangGraph merges these values into the
-    checkpoint and continues execution from human_review_agent.
     """
-    run = _runs.get(thread_id)
-    if not run:
-        raise HTTPException(status_code=404, detail=f"No run found for thread_id={thread_id}")
+    async with get_async_session() as session:
+        repo = ApplicationRepository(session)
+        run = await repo.get_by_thread_id(thread_id)
+        if not run:
+            raise HTTPException(status_code=404, detail=f"No run found for thread_id={thread_id}")
 
-    if run["status"] != "awaiting_review":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Run is not awaiting review (status={run['status']})",
-        )
+        if run.status != "pending_review":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Run is not awaiting review (status={run.status})",
+            )
 
-    # Validate rejection has feedback
-    if not decision.approved and not (decision.feedback and decision.feedback.strip()):
-        raise HTTPException(
-            status_code=422,
-            detail="feedback is required when approved=False. "
-                   "Provide specific notes to guide the re-tailor.",
-        )
+        # Validate rejection has feedback
+        if not decision.approved and not (decision.feedback and decision.feedback.strip()):
+            raise HTTPException(
+                status_code=422,
+                detail="feedback is required when approved=False. "
+                       "Provide specific notes to guide the re-tailor.",
+            )
+
+        # Mark as running again before background task starts
+        await repo.update_status(thread_id, status="running")
 
     # Build state update to merge into checkpoint
     state_update: dict = {
@@ -146,15 +137,14 @@ async def submit_review_decision(
         "rejection_feedback": decision.feedback if not decision.approved else None,
     }
 
-    # Mark as running again before background task starts
-    _runs[thread_id]["status"] = "running"
-
-    # Resume graph in background (same pattern as initial run)
+    # Resume graph in background
+    graph = request.app.state.graph
     background_tasks.add_task(
         _resume_graph,
         thread_id=thread_id,
         state_update=state_update,
         is_approval=decision.approved,
+        graph=graph,
     )
 
     action = "approved → applying" if decision.approved else "rejected → re-tailoring"
@@ -163,38 +153,37 @@ async def submit_review_decision(
     return RunStatus(thread_id=thread_id, status="running")
 
 
-def _resume_graph(thread_id: str, state_update: dict, is_approval: bool):
+async def _resume_graph(thread_id: str, state_update: dict, is_approval: bool, graph):
     """
-    Resume the graph after a human review decision.
-
-    Calls graph.invoke() with the same thread_id — LangGraph loads the checkpoint,
-    merges state_update, and continues from human_review_agent.
+    Resume the graph asynchronously after a human review decision.
     """
     config = {"configurable": {"thread_id": thread_id}}
 
     try:
-        final_state = graph.invoke(state_update, config=config)
+        final_state = await graph.ainvoke(state_update, config=config)
 
         submission_status = final_state.get("submission_status")
 
-        if is_approval:
-            # Approval path always goes to completion
-            _runs[thread_id] = {
-                "status": "completed",
-                "submission_status": submission_status or "failed",
-                "error": final_state.get("error"),
-            }
-        else:
-            # Rejection path loops back to another HUMAN_REVIEW interrupt
-            if submission_status:
-                _runs[thread_id] = {
-                    "status": "completed",
-                    "submission_status": submission_status,
-                    "error": final_state.get("error"),
-                }
+        async with get_async_session() as session:
+            repo = ApplicationRepository(session)
+            if is_approval:
+                # Approval path always goes to completion
+                await repo.update_status(
+                    thread_id,
+                    status=submission_status or "failed",
+                    error_message=final_state.get("error")
+                )
             else:
-                # Paused at HUMAN_REVIEW again (re-tailor complete, new review)
-                _runs[thread_id]["status"] = "awaiting_review"
+                # Rejection path loops back to another HUMAN_REVIEW interrupt
+                if submission_status:
+                    await repo.update_status(
+                        thread_id,
+                        status=submission_status,
+                        error_message=final_state.get("error")
+                    )
+                else:
+                    # Paused at HUMAN_REVIEW again (re-tailor complete, new review)
+                    await repo.update_status(thread_id, status="pending_review")
 
         logger.info(
             "_resume_graph: thread=%s | submission=%s",
@@ -203,4 +192,7 @@ def _resume_graph(thread_id: str, state_update: dict, is_approval: bool):
 
     except Exception as e:
         logger.error("_resume_graph: thread=%s raised exception: %s", thread_id, e)
-        _runs[thread_id] = {"status": "failed", "error": str(e), "submission_status": None}
+        async with get_async_session() as session:
+            repo = ApplicationRepository(session)
+            await repo.update_status(thread_id, status="failed", error_message=str(e))
+

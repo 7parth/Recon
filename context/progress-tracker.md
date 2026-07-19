@@ -60,30 +60,35 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 ### Issues Resolved
 - **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
 
+### Supabase Integration ✅ (Issue 02)
+- **`app/config.py`** — Supabase env vars
+- **`app/db/database.py`** — async SQLAlchemy engine via Supabase PostgreSQL connection string
+- **`app/db/supabase.py`** — Supabase async client singleton
+- **`app/db/models/`** — ORM models (`ApplicationRecord`, `Company`, `Job`, `Resume`, `Review`) with storage URL fields
+- **`app/db/repositories/`** — async repository pattern
+- **`app/storage/`** — `storage.py`, `resume_storage.py`, `document_storage.py`
+- **`app/services/storage_service.py`** — upload documents, return public URLs
+- **`app/services/checkpoint_service.py`** — AsyncPostgresSaver wired to Supabase Postgres
+- **`backend/.env.example`** — Supabase env vars added
+- **Alembic migrations** — initial schema created
+
+### Supabase API Integration ✅ (Issue 02 - API Layer)
+- **`app/main.py`** — Use FastAPI `lifespan` to initialize AsyncPostgresSaver globally
+- **`app/graph/builder.py`** — Replaced global graph singleton with dynamic lifespan compilation
+- **`app/api/routes/application.py`** — Removed in-memory `_runs` dict. Implemented `ApplicationRepository` with async sessions. Rewrote background tasks using `ainvoke`.
+- **`/resume/parse`** — Integrated `StorageService` to upload raw resumes to Supabase Storage and return public URL.
+- **`app/api/routes/review.py`** — Removed `_runs`. Human review endpoints now fetch checkpoint state directly via `app.state.graph.aget_state()` and update the DB accordingly.
+
 ## In Progress
 
-- **Supabase integration** (Issue 02)
-  - [x] Update context docs (project-overview, architecture, code-standards, ai-workflow-rules)
-  - [x] `app/config.py` — add Supabase env vars
-  - [x] `app/db/database.py` — async SQLAlchemy engine via Supabase PostgreSQL connection string
-  - [x] `app/db/supabase.py` — Supabase async client singleton
-  - [x] `app/db/models/` — ORM models with storage URL fields (not raw text blobs)
-  - [x] `app/db/repositories/` — async repository pattern
-  - [x] `app/storage/` — new module: `storage.py`, `resume_storage.py`, `document_storage.py`
-  - [x] `app/services/storage_service.py` — upload resume/documents, return public URLs
-  - [x] `app/services/checkpoint_service.py` — AsyncPostgresSaver wired to Supabase Postgres
-  - [x] `backend/.env.example` — Supabase env vars
-  - [x] Alembic migration for initial schema
+- **End-to-end graph smoke test** 
+  - Invoke full graph with real resume + JD URL and DB persistence
+  - Verify documents correctly store in Supabase Storage buckets
+  - Verify graph successfully suspends at HUMAN_REVIEW and resumes properly
 
 ## Next Up
 
-- Supabase project creation (user action — see below)
-- `app/db/supabase.py` — `get_supabase_client()` async factory
-- `app/storage/storage.py` — base storage operations
-- `app/services/storage_service.py` — upload resume, cover letter, tailored resume; return URLs
-- `app/db/models/application.py` — `ApplicationRecord` with `resume_storage_url`, `tailored_resume_url`, `cover_letter_url`
-- End-to-end graph smoke test with real resume + JD URL
-- Automation implementation — full Playwright flows for Greenhouse + Lever (Sprint 3)
+- **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
 
 ## Open Questions
 
