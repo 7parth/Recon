@@ -60,30 +60,30 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 ### Issues Resolved
 - **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
 
+### Supabase Integration ✅ (Issue 02)
+- **`app/config.py`** — Supabase env vars
+- **`app/db/database.py`** — async SQLAlchemy engine via Supabase PostgreSQL connection string
+- **`app/db/supabase.py`** — Supabase async client singleton
+- **`app/db/models/`** — ORM models (`ApplicationRecord`, `Company`, `Job`, `Resume`, `Review`) with storage URL fields
+- **`app/db/repositories/`** — async repository pattern
+- **`app/storage/`** — `storage.py`, `resume_storage.py`, `document_storage.py`
+- **`app/services/storage_service.py`** — upload documents, return public URLs
+- **`app/services/checkpoint_service.py`** — AsyncPostgresSaver wired to Supabase Postgres
+- **`backend/.env.example`** — Supabase env vars added
+- **Alembic migrations** — initial schema created
+
 ## In Progress
 
-- **Supabase integration** (Issue 02)
-  - [x] Update context docs (project-overview, architecture, code-standards, ai-workflow-rules)
-  - [x] `app/config.py` — add Supabase env vars
-  - [x] `app/db/database.py` — async SQLAlchemy engine via Supabase PostgreSQL connection string
-  - [x] `app/db/supabase.py` — Supabase async client singleton
-  - [x] `app/db/models/` — ORM models with storage URL fields (not raw text blobs)
-  - [x] `app/db/repositories/` — async repository pattern
-  - [x] `app/storage/` — new module: `storage.py`, `resume_storage.py`, `document_storage.py`
-  - [x] `app/services/storage_service.py` — upload resume/documents, return public URLs
-  - [x] `app/services/checkpoint_service.py` — AsyncPostgresSaver wired to Supabase Postgres
-  - [x] `backend/.env.example` — Supabase env vars
-  - [x] Alembic migration for initial schema
+- **Wire Supabase DB & Storage to API Layer**
+  - Update `app/main.py` lifecycle to initialize DB pool and checkpointer
+  - Replace in-memory `_runs` dict in `app/api/routes/application.py` and `review.py` with repository calls
+  - Upload user's resume file to Supabase Storage inside `/resume/parse` or a new endpoint
 
 ## Next Up
 
-- Supabase project creation (user action — see below)
-- `app/db/supabase.py` — `get_supabase_client()` async factory
-- `app/storage/storage.py` — base storage operations
-- `app/services/storage_service.py` — upload resume, cover letter, tailored resume; return URLs
-- `app/db/models/application.py` — `ApplicationRecord` with `resume_storage_url`, `tailored_resume_url`, `cover_letter_url`
-- End-to-end graph smoke test with real resume + JD URL
-- Automation implementation — full Playwright flows for Greenhouse + Lever (Sprint 3)
+- **Supabase project creation** — user action: populate `.env` with actual Supabase credentials (URL, keys, DB connection string)
+- **End-to-end graph smoke test** — invoke full graph with real resume + JD URL and DB persistence
+- **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
 
 ## Open Questions
 
