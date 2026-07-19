@@ -6,7 +6,7 @@ Implementation
 
 ## Current Goal
 
-Database layer — SQLAlchemy async models + Alembic migrations for application history persistence
+Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storage for documents, AsyncPostgresSaver for LangGraph checkpoints
 
 ## Completed
 
@@ -57,22 +57,39 @@ Database layer — SQLAlchemy async models + Alembic migrations for application 
 ### Docs
 - **`context/project-overview.md`** — Technical Architecture section: stack table, pipeline diagram, state table, key decisions, repo layout
 
+### Issues Resolved
+- **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
+
 ## In Progress
 
-- Database layer (`app/db/`)
+- **Supabase integration** (Issue 02)
+  - [x] Update context docs (project-overview, architecture, code-standards, ai-workflow-rules)
+  - [x] `app/config.py` — add Supabase env vars
+  - [x] `app/db/database.py` — async SQLAlchemy engine via Supabase PostgreSQL connection string
+  - [x] `app/db/supabase.py` — Supabase async client singleton
+  - [x] `app/db/models/` — ORM models with storage URL fields (not raw text blobs)
+  - [x] `app/db/repositories/` — async repository pattern
+  - [x] `app/storage/` — new module: `storage.py`, `resume_storage.py`, `document_storage.py`
+  - [x] `app/services/storage_service.py` — upload resume/documents, return public URLs
+  - [x] `app/services/checkpoint_service.py` — AsyncPostgresSaver wired to Supabase Postgres
+  - [x] `backend/.env.example` — Supabase env vars
+  - [x] Alembic migration for initial schema
 
 ## Next Up
 
-- **`app/db/database.py`** — SQLAlchemy async engine + session factory
-- **`app/db/models/application.py`** — `ApplicationRecord` ORM model
-- **Alembic migrations** — `alembic init`, initial migration
-- **End-to-end graph smoke test** — invoke full graph with real resume + JD URL
-- **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
+- Supabase project creation (user action — see below)
+- `app/db/supabase.py` — `get_supabase_client()` async factory
+- `app/storage/storage.py` — base storage operations
+- `app/services/storage_service.py` — upload resume, cover letter, tailored resume; return URLs
+- `app/db/models/application.py` — `ApplicationRecord` with `resume_storage_url`, `tailored_resume_url`, `cover_letter_url`
+- End-to-end graph smoke test with real resume + JD URL
+- Automation implementation — full Playwright flows for Greenhouse + Lever (Sprint 3)
 
 ## Open Questions
 
 - ~~Dynamic planner vs fixed routing?~~ **Resolved**: fixed routing (statically compiled graph, pure-function routers in `router.py`)
 - ~~Parallel execution strategy?~~ **Resolved**: LangGraph native fan-out via `route_after_planner` returning a list
+- **Supabase project**: Does user have a Supabase project created? If not, create one at [supabase.com](https://supabase.com) and capture `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and the direct Postgres connection string.
 
 ## Architecture Decisions
 
@@ -82,20 +99,26 @@ Database layer — SQLAlchemy async models + Alembic migrations for application 
 - Two-stage match scoring: embeddings floor check → LLM detailed, 70/30 blended score.
 - API schema ≠ graph state models — deliberate separation for independent evolution.
 - LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2 extraction / 0.7 creative).
+- **Database: Supabase PostgreSQL** — managed, hosted Postgres. SQLAlchemy async talks to it via direct connection string. No local Postgres required.
+- **Storage: Supabase Storage** — resume.pdf, tailored_resume.pdf, cover_letter.pdf stored in buckets. DB models store URLs, not blobs.
+- **LangGraph checkpointer: AsyncPostgresSaver** — pointed at Supabase Postgres. Interrupted workflows survive server restarts.
+- **Graph nodes never access Supabase directly** — all DB/storage access goes through repositories and services.
 
 ## Git
 
 - `main` — stable baseline (2 commits: scaffold + gitignore)
-- `dev`  — active development (5 commits: agents, tools, browser/search, FastAPI, fixes)
+- `dev`  — active development (6 commits)
   - `00a2cf4` — tool layer + parsing agents
   - `f332d97` — remaining agents (tailoring, review, apply, tracking)
   - `2348fbd` — browser.py, search.py, automation stubs
   - `fcbc574` — FastAPI layer + project-overview update
-  - `HEAD`    — fix: issue 01 (duckduckgo-search dep fix, NVIDIA_MODEL env var)
+  - `1811d9d` — fix: issue 01 (duckduckgo-search dep fix, NVIDIA_MODEL env var)
+  - `HEAD`    — in progress: issue 02 (Supabase integration)
 
 ## Session Notes
 
-Entire backend graph + API layer implemented in one session.
+Entire backend graph + API layer implemented in session 1.
 Server smoke-tested live: uvicorn started, `/resume/parse` hit with real PDF → 200 OK, 5,418 chars extracted.
-**Issue 01 Resolved:** Fixed missing `duckduckgo-search` dependency. Moved hardcoded LLM model to `NVIDIA_MODEL` env var to address deprecation warning gracefully.
+**Issue 01 Resolved:** Fixed missing `duckduckgo-search` dependency. Moved hardcoded LLM model to `NVIDIA_MODEL` env var.
+**Issue 02 In Progress:** Migrating from raw PostgreSQL to Supabase (hosted Postgres + Storage + AsyncPostgresSaver).
 All work on `dev` branch — ready for DB layer then PR to `main`.

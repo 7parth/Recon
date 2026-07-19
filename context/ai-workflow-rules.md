@@ -60,3 +60,11 @@ Update the relevant context file whenever implementation changes:
 - Agents communicate only through ApplicationState.
 - Planner Agent performs routing; worker agents never invoke each other directly.
 - Human Review Agent must remain before Apply Agent.
+
+## Supabase Rules
+
+- Never access Supabase (client, storage, or DB session) directly from graph nodes.
+- All database access must go through `app/db/repositories/` — agents are pure functions of state.
+- All file storage access must go through `app/services/storage_service.py`.
+- Agents receive storage URLs as part of `ApplicationState`; they never perform uploads.
+- This keeps agents fully testable without a live Supabase connection.

@@ -36,16 +36,26 @@
 
 ## Data and Storage
 
-- Structured metadata (status, scores, timestamps, relationships) belongs in PostgreSQL
-- Tailored resume/cover letter text belongs in PostgreSQL as content, not as separate blob storage, unless it grows large enough to warrant it
+- **Structured metadata** (status, scores, timestamps, relationships, file URLs) belongs in **Supabase PostgreSQL** via SQLAlchemy
+- **Documents** (resume.pdf, tailored_resume.pdf, cover_letter.pdf, Playwright screenshots) belong in **Supabase Storage** — the database stores the returned public URL, not the file content
 - Redis holds only cache and queue data — nothing that would be a problem to lose
 - Playwright session/storage-state files are kept outside the main repo/data directories, treated as credentials
+- Never store large text blobs in DB rows — if content exceeds ~4 KB, put it in Supabase Storage and store the URL
+
+## Supabase Access Rules
+
+- **Graph nodes must never access Supabase directly** — no `supabase.storage.from_()` or `AsyncSession` calls inside agent functions
+- All database access goes through `app/db/repositories/` — one repository class per entity
+- All file storage access goes through `app/services/storage_service.py`
+- The Supabase client and SQLAlchemy session are injected via FastAPI dependencies (`app/dependencies.py`), never imported directly in routes or agents
 
 ## File Organization
 
 - `graph/` — LangGraph nodes, state schema, routing functions, prompts
 - `api/` — FastAPI routes, request/response models
 - `automation/` — Playwright modules, one per ATS platform
-- `db/` — SQLAlchemy/pydantic models, migrations, Redis client wrapper
-- `worker/` — Celery/arq task definitions for async run execution
+- `db/` — SQLAlchemy models, async engine, Supabase client, repositories, migrations
+- `storage/` — Supabase Storage wrappers: `storage.py`, `resume_storage.py`, `document_storage.py`
+- `services/` — business logic: `storage_service.py`, `checkpoint_service.py`, etc.
+- `workers/` — Celery/arq task definitions for async run execution
 - `tests/` — mirrors the above structure; one test module per node/route/platform
