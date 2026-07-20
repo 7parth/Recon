@@ -75,7 +75,7 @@ async def parse_resume_file(file: UploadFile = File(...)):
     temp_id = str(uuid.uuid4())
 
     async with get_async_session() as session:
-        client = get_supabase_client()
+        client = await get_supabase_client()
         storage_svc = StorageService(client, session)
         resume_storage_url = await storage_svc.upload_resume(
             run_id=temp_id,

@@ -80,7 +80,7 @@ class BaseStorage:
                 f"Supabase Storage upload failed for bucket={self._bucket!r} "
                 f"path={path!r}: {response.error}"
             )
-        return self.public_url(path)
+        return await self.public_url(path)
 
     # ── Download ──────────────────────────────────────────────────────────
 
@@ -101,13 +101,13 @@ class BaseStorage:
 
     # ── URL ───────────────────────────────────────────────────────────────
 
-    def public_url(self, path: str) -> str:
+    async def public_url(self, path: str) -> str:
         """Return the public URL for an object without making a network call.
 
         The Supabase SDK computes this deterministically from the project URL
         and bucket name — no round-trip required.
         """
-        return (
+        return await (
             self._client.storage
             .from_(self._bucket)
             .get_public_url(path)

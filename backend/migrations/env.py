@@ -28,8 +28,8 @@ from app.config import get_settings
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with our env config
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# Note: DATABASE_URL is injected directly in run_async_migrations() to avoid
+# ConfigParser interpolation errors with %-encoded characters in the password.
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -72,11 +72,14 @@ async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
     and associate a connection with the context.
 
+    We create the engine directly from the DATABASE_URL to avoid
+    ConfigParser interpolation issues with %-encoded characters
+    (e.g. %40 for @ in the password).
     """
+    from sqlalchemy.ext.asyncio import create_async_engine
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    connectable = create_async_engine(
+        get_settings().database_url,
         poolclass=pool.NullPool,
     )
 
