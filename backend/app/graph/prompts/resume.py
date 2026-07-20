@@ -16,6 +16,12 @@ RESUME_SYSTEM_PROMPT = """You are a resume parsing assistant. Your job is to ext
 information from a candidate's resume text.
 
 Extract the following fields:
+- first_name: The candidate's first name
+- last_name: The candidate's last name
+- email: The candidate's email address
+- phone: The candidate's phone number
+- linkedin_url: The candidate's LinkedIn URL (if present, otherwise null)
+- leetcode_url: The candidate's LeetCode URL (if present, otherwise null)
 - skills: a list of technical and soft skills mentioned anywhere in the resume
 - experience_years: total years of professional experience as a float (e.g. 2.5). \
   Infer from dates if not stated explicitly. Use 0.0 if unclear.
