@@ -101,6 +101,7 @@ def apply_agent_node(state: ApplicationState) -> dict:
     job_url         = state.get("job_url", "").strip()
     tailored_resume = state.get("tailored_resume")
     cover_letter    = state.get("cover_letter")
+    candidate_profile = state.get("resume_profile")
 
     # ── Guards ────────────────────────────────────────────────────────────────
     if not job_url:
@@ -109,6 +110,8 @@ def apply_agent_node(state: ApplicationState) -> dict:
         return {"submission_status": "failed", "error": "apply_agent: tailored_resume missing"}
     if cover_letter is None:
         return {"submission_status": "failed", "error": "apply_agent: cover_letter missing"}
+    if candidate_profile is None:
+        return {"submission_status": "failed", "error": "apply_agent: candidate_profile missing"}
 
     # ── Detect platform ───────────────────────────────────────────────────────
     platform = _detect_platform(job_url)
@@ -139,6 +142,7 @@ def apply_agent_node(state: ApplicationState) -> dict:
             url=job_url,
             resume_text=tailored_resume.content,
             cover_letter_text=cover_letter.content,
+            candidate_profile=candidate_profile,
         )
     except Exception as e:
         logger.error("apply_agent: browser automation raised an exception: %s", e)

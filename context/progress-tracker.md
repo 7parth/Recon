@@ -80,9 +80,13 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 - **`app/api/routes/review.py`** — Removed `_runs`. Human review endpoints now fetch checkpoint state directly via `app.state.graph.aget_state()` and update the DB accordingly.
 - **End-to-end graph smoke test** — invoked full graph with real resume + JD URL, successfully hit `pending_review` breakpoint, stored documents in Supabase buckets.
 
-## In Progress
-
 - **Automation implementation** — full Playwright flows for Greenhouse + Lever (Sprint 3)
+  - Updated `CandidateProfile` to extract `first_name`, `last_name`, `email`, `phone`, `linkedin_url`, `leetcode_url`.
+  - Updated `greenhouse.py` and `lever.py` to use `BrowserSession` context manager.
+  - Implemented form fills via `safe_fill` and resume upload via `upload_file`.
+  - Added screenshot capture on automation error.
+
+## In Progress
 
 ## Next Up
 

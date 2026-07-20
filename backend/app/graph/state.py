@@ -4,6 +4,12 @@ from typing import TypedDict, Optional, Literal
 from pydantic import BaseModel
 
 class CandidateProfile(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    phone: str
+    linkedin_url: Optional[str] = None
+    leetcode_url: Optional[str] = None
     skills: list[str]
     experience_years: float
     summary: str
