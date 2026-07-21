@@ -86,6 +86,13 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
   - Implemented form fills via `safe_fill` and resume upload via `upload_file`.
   - Added screenshot capture on automation error.
 
+### Phase 7 & 8 API Integration ✅
+- **`app/api/schemas/jobs.py`** — Added `JobSearchResponse` and `JobSearchResult`
+- **`app/api/schemas/history.py`** — Added `ApplicationRecordResponse` and `HistoryListResponse`
+- **`app/api/routes/jobs.py`** — Added `GET /jobs/search` to proxy DDG web search (Phase 7)
+- **`app/api/routes/history.py`** — Added `GET /history` and `GET /history/{thread_id}` for persistence tracking (Phase 8)
+- **`app/main.py`** — Registered new routers
+
 ## In Progress
 
 ## Next Up
