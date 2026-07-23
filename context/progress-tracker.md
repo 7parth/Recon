@@ -93,9 +93,26 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 - **`app/api/routes/history.py`** — Added `GET /history` and `GET /history/{thread_id}` for persistence tracking (Phase 8)
 - **`app/main.py`** — Registered new routers
 
+### Frontend UI & API Integration ✅
+- **Scaffold & Design System:** Vite + React + TypeScript setup with `index.css` adhering to factory-style terminal aesthetic (`02-reference-theme.md`).
+- **Dashboard Layout:** `TopNav`, `Sidebar`, and `AppShell` with reactive components (`MatchScoreRing`, `PipelineStepper`, `PipelineRun`).
+- **Data Fetching:** Custom React hooks (`useDashboardData`, `usePipelineRun`) integrating with FastAPI endpoints (`getHistory`, `getRunStatus`).
+- **Live Polling:** Polling mechanism implemented in `usePipelineRun` to animate the stepper graph sequentially based on active run status.
+- **Start Run Flow:** Modal UI supporting file uploads to Supabase Storage via FastAPI proxy (`POST /resume/parse`) and dispatching runs.
+
+### Human Review UI ✅
+- **`ReviewQueuePage.tsx`:** Full-screen list view of all pending applications dynamically mapping over `api.getHistory()`.
+- **`ReviewDetail.tsx`:** Split-pane interface providing job context (ATS Keyword pills) alongside a tabbed preview (`Tabs.tsx`) of the Tailored Resume and Cover Letter.
+- **Review Actions:** Implemented Approve and Reject feedback flows interacting with `api.approveRun()`.
+
 ## In Progress
 
+- Next phase (TBD: Settings, Automation Playwright flows, or user management).
+
 ## Next Up
+
+- Finish outstanding subpages (Resumes, Profile, etc.)
+- Integrate Playwright browser automation UI / logs
 
 ## Open Questions
 

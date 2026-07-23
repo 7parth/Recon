@@ -1,0 +1,41 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* Outlined variants */
+.applied {
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
+}
+.skipped {
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+}
+.failed {
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+}
+.in_review {
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning);
+}
+
+/* Solid variants */
+.high_match {
+  background: var(--color-accent);
+  color: #fff;
+  border: 1px solid var(--color-accent);
+}
+.good_match {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-hover);
+}

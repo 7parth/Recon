@@ -1,0 +1,7 @@
+.main {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--navbar-height);
+  min-height: calc(100vh - var(--navbar-height));
+  padding: var(--space-8);
+  background: var(--color-bg-app);
+}

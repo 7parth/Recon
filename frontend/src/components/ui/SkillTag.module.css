@@ -1,0 +1,21 @@
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: #C0C0C0;
+  background: var(--color-bg-elevated);
+  border: 1px solid #2A2A2A;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.overflow {
+  color: var(--color-text-tertiary);
+  border-style: dashed;
+}
