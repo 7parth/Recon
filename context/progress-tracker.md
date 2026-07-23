@@ -107,12 +107,17 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 
 ## In Progress
 
-- Next phase (TBD: Settings, Automation Playwright flows, or user management).
+- **Phase 10: Outstanding Frontend Subpages**
+  - Replace stubs for `Resumes` and `Profile` with actual UI layouts.
+  - Implement the `JobSearch` UI using the `GET /jobs/search` endpoint.
 
 ## Next Up
 
-- Finish outstanding subpages (Resumes, Profile, etc.)
-- Integrate Playwright browser automation UI / logs
+- **Phase 11: Automation Layer UI**
+  - Integrate Playwright browser automation logs.
+  - Build out `AutomationLogs` and `Integrations` subpages.
+- **Phase 12: Auth & Settings**
+  - Build `Settings` page for user management and API key storage.
 
 ## Open Questions
 
