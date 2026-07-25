@@ -51,10 +51,22 @@ def create_app() -> FastAPI:
         logger.info("Docs available at http://localhost:8000/docs")
         
         # Initialize LangGraph Checkpoint Service (Supabase Postgres)
-        # This manages a connection pool scoped to the app lifecycle
-        async with get_checkpointer() as checkpointer:
-            app_instance.state.checkpointer = checkpointer
-            app_instance.state.graph = build_graph(checkpointer=checkpointer)
+        # Fall back to MemorySaver if Postgres is unavailable or authentication fails
+        try:
+            async with get_checkpointer() as checkpointer:
+                app_instance.state.checkpointer = checkpointer
+                app_instance.state.graph = build_graph(checkpointer=checkpointer)
+                yield
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize Postgres checkpointer ({e}). "
+                "Falling back to MemorySaver (in-memory state persistence)."
+            )
+            from langgraph.checkpoint.memory import MemorySaver
+
+            memory_cp = MemorySaver()
+            app_instance.state.checkpointer = memory_cp
+            app_instance.state.graph = build_graph(checkpointer=memory_cp)
             yield
 
         logger.info("Recon API shutting down")

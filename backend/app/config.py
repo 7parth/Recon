@@ -49,9 +49,17 @@ class Settings(BaseSettings):
     database_url: str = Field(
         "",
         description=(
-            "Async SQLAlchemy connection string for Supabase PostgreSQL. "
-            "Find this in: Supabase dashboard → Project Settings → Database → Connection string (URI mode). "
-            "Replace the scheme with postgresql+asyncpg://"
+            "Async SQLAlchemy (asyncpg) connection string for Supabase PostgreSQL. "
+            "Use the Session Pooler URL from: Supabase dashboard → Project Settings → Database. "
+            "Format: postgresql+asyncpg://postgres.PROJECT_REF:PASSWORD@aws-X-REGION.pooler.supabase.com:5432/postgres"
+        ),
+    )
+    checkpoint_database_url: str = Field(
+        "",
+        description=(
+            "psycopg3 connection string for LangGraph AsyncPostgresSaver. "
+            "Same as DATABASE_URL but with scheme 'postgresql://' (no asyncpg). "
+            "Format: postgresql://postgres.PROJECT_REF:PASSWORD@aws-X-REGION.pooler.supabase.com:5432/postgres"
         ),
     )
 

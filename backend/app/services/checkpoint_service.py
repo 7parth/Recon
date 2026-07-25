@@ -39,19 +39,24 @@ async def get_checkpointer() -> AsyncGenerator[AsyncPostgresSaver, None]:
             state = await checkpointer.aget_tuple(config)
     """
     settings = get_settings()
-    # AsyncPostgresSaver requires a psycopg3 connection string.
-    # We replace the SQLAlchemy asyncpg scheme with postgresql://
-    conn_str = settings.database_url.replace(
-        "postgresql+asyncpg://", "postgresql://"
-    )
+    # Use the dedicated psycopg3 connection string if available.
+    # Fall back to replacing the asyncpg scheme for backward compatibility.
+    if settings.checkpoint_database_url:
+        conn_str = settings.checkpoint_database_url
+    else:
+        conn_str = settings.database_url.replace(
+            "postgresql+asyncpg://", "postgresql://"
+        )
 
     # Use a small pool size since this is just for checkpoints
     async with AsyncConnectionPool(
         conninfo=conn_str,
         max_size=5,
-        kwargs={"autocommit": True},
+        timeout=5.0,
+        kwargs={"autocommit": True, "connect_timeout": 5},
     ) as pool:
         checkpointer = AsyncPostgresSaver(pool)
         # Ensure the LangGraph tables exist (checkpoints, checkpoint_writes, etc.)
         await checkpointer.setup()
         yield checkpointer
+
