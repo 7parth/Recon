@@ -3,14 +3,14 @@ import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './pages/Dashboard';
 import { ReviewQueuePage } from './pages/ReviewQueuePage';
 import { ReviewDetail } from './pages/ReviewDetail';
+import { JobSearchPage } from './pages/JobSearchPage';
+import { ResumesPage } from './pages/ResumesPage';
+import { ProfilePage } from './pages/ProfilePage';
 import {
   Activity,
   Applications,
   History,
-  Resumes,
-  Profile,
   Keywords,
-  JobSearch,
   SavedJobs,
   ATSPlatforms,
   AutomationLogs,
@@ -29,10 +29,10 @@ function App() {
           <Route path="review" element={<ReviewQueuePage />} />
           <Route path="review/:threadId" element={<ReviewDetail />} />
           <Route path="history" element={<History />} />
-          <Route path="resumes" element={<Resumes />} />
-          <Route path="profile" element={<Profile />} />
+          <Route path="resumes" element={<ResumesPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="keywords" element={<Keywords />} />
-          <Route path="jobs/search" element={<JobSearch />} />
+          <Route path="jobs/search" element={<JobSearchPage />} />
           <Route path="jobs/saved" element={<SavedJobs />} />
           <Route path="automation/ats" element={<ATSPlatforms />} />
           <Route path="automation/logs" element={<AutomationLogs />} />

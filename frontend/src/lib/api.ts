@@ -36,8 +36,12 @@ export const api = {
   },
 
   // ── Jobs ──
-  searchJobs: (query: string) =>
-    request(`/jobs/search?q=${encodeURIComponent(query)}`),
+  searchJobs: (params: { role: string; location?: string; max_results?: number }) => {
+    const q = new URLSearchParams({ role: params.role });
+    if (params.location) q.set('location', params.location);
+    if (params.max_results) q.set('max_results', String(params.max_results));
+    return request(`/jobs/search?${q.toString()}`);
+  },
 
   // ── History ──
   getHistory: () => request('/history'),
