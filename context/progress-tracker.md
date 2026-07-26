@@ -151,8 +151,7 @@ All "under construction" stubs replaced with full pages. `Stubs.tsx` now only ho
 
 ## Git
 
-- `main` — stable baseline (2 commits: scaffold + gitignore)
-- `dev`  — active development
+- `main` — active development branch (all work committed here)
   - `00a2cf4` — tool layer + parsing agents
   - `f332d97` — remaining agents (tailoring, review, apply, tracking)
   - `2348fbd` — browser.py, search.py, automation stubs
@@ -160,7 +159,8 @@ All "under construction" stubs replaced with full pages. `Stubs.tsx` now only ho
   - `1811d9d` — fix: issue 01 (duckduckgo-search dep fix, NVIDIA_MODEL env var)
   - `d02b280` — fix: graceful DB fallback + faster connection timeout
   - `ba4c972` — feat: phase 10 — JobSearch, Resumes, Profile pages
-  - `HEAD`    — feat: phases 11–14 — all remaining frontend pages + sidebar wiring
+  - `62a03ee` — feat: phases 11-14 — all remaining frontend pages + dynamic sidebar ← HEAD
+- `dev` — stale branch (ahead of initial scaffold; superseded by main)
 
 ## Session Notes
 
