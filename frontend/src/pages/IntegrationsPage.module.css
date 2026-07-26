@@ -1,0 +1,169 @@
+.page {
+  padding: var(--space-8);
+  max-width: 800px;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+}
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Banner ── */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Cards ── */
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  transition: border-color var(--transition-base);
+}
+.card:hover { border-color: var(--color-border-hover); }
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cardLabel {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.envVar {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+}
+.cardDesc {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-shrink: 0;
+}
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color var(--transition-base);
+  white-space: nowrap;
+}
+.linkBtn:hover { color: var(--color-text-primary); }
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: border-color var(--transition-base), color var(--transition-base);
+  white-space: nowrap;
+}
+.copyBtn:hover { border-color: var(--color-border-hover); color: var(--color-text-primary); }
+.copyDone { color: var(--color-success) !important; border-color: var(--color-success) !important; }
+
+/* ── Value row ── */
+.valueRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.valueInput {
+  flex: 1;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  letter-spacing: 0.04em;
+}
+.backendNote {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+/* ── .env block ── */
+.envBlock {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.envHeader {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+.envCode {
+  display: block;
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+}

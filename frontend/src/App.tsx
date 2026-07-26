@@ -6,17 +6,15 @@ import { ReviewDetail } from './pages/ReviewDetail';
 import { JobSearchPage } from './pages/JobSearchPage';
 import { ResumesPage } from './pages/ResumesPage';
 import { ProfilePage } from './pages/ProfilePage';
-import {
-  Activity,
-  Applications,
-  History,
-  Keywords,
-  SavedJobs,
-  ATSPlatforms,
-  AutomationLogs,
-  Settings,
-  Integrations,
-} from './pages/Stubs';
+import { ApplicationsPage } from './pages/ApplicationsPage';
+import { ActivityPage } from './pages/ActivityPage';
+import { KeywordsPage } from './pages/KeywordsPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { IntegrationsPage } from './pages/IntegrationsPage';
+import { SavedJobsPage } from './pages/SavedJobsPage';
+import { AutomationLogsPage } from './pages/AutomationLogsPage';
+import { ATSPlatformsPage } from './pages/ATSPlatformsPage';
+import { History } from './pages/Stubs';
 
 function App() {
   return (
@@ -24,20 +22,20 @@ function App() {
       <Routes>
         <Route path="/" element={<AppShell />}>
           <Route index element={<Dashboard />} />
-          <Route path="activity" element={<Activity />} />
-          <Route path="applications" element={<Applications />} />
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="applications" element={<ApplicationsPage />} />
           <Route path="review" element={<ReviewQueuePage />} />
           <Route path="review/:threadId" element={<ReviewDetail />} />
           <Route path="history" element={<History />} />
           <Route path="resumes" element={<ResumesPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="keywords" element={<Keywords />} />
+          <Route path="keywords" element={<KeywordsPage />} />
           <Route path="jobs/search" element={<JobSearchPage />} />
-          <Route path="jobs/saved" element={<SavedJobs />} />
-          <Route path="automation/ats" element={<ATSPlatforms />} />
-          <Route path="automation/logs" element={<AutomationLogs />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="integrations" element={<Integrations />} />
+          <Route path="jobs/saved" element={<SavedJobsPage />} />
+          <Route path="automation/ats" element={<ATSPlatformsPage />} />
+          <Route path="automation/logs" element={<AutomationLogsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="integrations" element={<IntegrationsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,0 +1,192 @@
+.page {
+  padding: var(--space-8);
+  max-width: 800px;
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Stats ── */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-6);
+}
+.statItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.statValue {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.statLabel {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Add section ── */
+.addSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+.addRow {
+  display: flex;
+  gap: var(--space-2);
+}
+.input {
+  flex: 1;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+.input::placeholder { color: var(--color-text-tertiary); }
+.input:focus { border-color: var(--color-border-hover); }
+
+.addBtn {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 500;
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: border-color var(--transition-base), background var(--transition-base);
+  white-space: nowrap;
+}
+.addBtn:hover { border-color: var(--color-border-hover); background: #222; }
+.addBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Cloud ── */
+.cloudSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.emptyCloud {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-hover);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-base);
+}
+.tag:hover {
+  border-color: var(--color-accent);
+}
+.tagText {
+  line-height: 1;
+}
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color var(--transition-fast);
+  line-height: 1;
+}
+.removeBtn:hover { color: var(--color-danger); }
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+.saveGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.resetBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: color var(--transition-base);
+}
+.resetBtn:hover { color: var(--color-text-secondary); }
+
+.savedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--color-success);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.saveBtn {
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-5);
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+}
+.saveBtn:hover { opacity: 0.85; }
+
+/* ── Note ── */
+.note {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}

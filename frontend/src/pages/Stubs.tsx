@@ -1,3 +1,6 @@
+/* Remaining stub pages — to be replaced in future phases */
+import { useNavigate } from 'react-router-dom';
+
 export function StubPage({ title }: { title: string }) {
   return (
     <div>
@@ -7,13 +10,33 @@ export function StubPage({ title }: { title: string }) {
   );
 }
 
-export const Activity = () => <StubPage title="Activity" />;
-export const Applications = () => <StubPage title="Applications" />;
-export const ReviewQueuePage = () => <StubPage title="Review Queue" />;
-export const History = () => <StubPage title="History" />;
-export const Keywords = () => <StubPage title="Keywords" />;
-export const SavedJobs = () => <StubPage title="Saved Jobs" />;
-export const ATSPlatforms = () => <StubPage title="ATS Platforms" />;
-export const AutomationLogs = () => <StubPage title="Automation Logs" />;
-export const Settings = () => <StubPage title="Settings" />;
-export const Integrations = () => <StubPage title="Integrations" />;
+/* History: alias to Applications (/applications) for now */
+export function History() {
+  const navigate = useNavigate();
+  // Redirect to Applications page which shows full history
+  return (
+    <div>
+      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 'var(--space-4)' }}>History</h1>
+      <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)' }}>
+        Full application history is available on the All Applications page.
+      </p>
+      <button
+        onClick={() => navigate('/applications')}
+        style={{
+          background: 'var(--color-accent)',
+          border: 'none',
+          borderRadius: 'var(--radius-sm)',
+          color: '#fff',
+          fontFamily: 'var(--font-sans)',
+          fontSize: 'var(--text-base)',
+          fontWeight: 600,
+          padding: '8px 16px',
+          cursor: 'pointer',
+        }}
+      >
+        Go to All Applications →
+      </button>
+    </div>
+  );
+}
+

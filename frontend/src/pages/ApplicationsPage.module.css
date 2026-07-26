@@ -1,0 +1,218 @@
+.page {
+  padding: var(--space-8);
+  max-width: 1100px;
+}
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Toolbar ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  padding: var(--space-2) var(--space-3);
+  width: 240px;
+  transition: border-color var(--transition-base);
+  outline: none;
+}
+.searchInput::placeholder { color: var(--color-text-tertiary); }
+.searchInput:focus { border-color: var(--color-border-hover); }
+
+.filters {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.filterBtn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: border-color var(--transition-base), color var(--transition-base);
+}
+.filterBtn:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-text-secondary);
+}
+.filterActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ── Count bar ── */
+.countBar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.count {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.countLabel {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Table ── */
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  min-width: 780px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 80px 120px 90px 140px 90px;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-3);
+}
+
+.head {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sortBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: inherit;
+  padding: 0;
+}
+.sortBtn:hover { color: var(--color-text-primary); }
+
+.colPosition {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.positionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.jobTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.company {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colDocs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.docLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+  transition: opacity var(--transition-fast);
+}
+.docLink:hover { opacity: 0.7; }
+
+.reviewBtn {
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background var(--transition-base);
+  white-space: nowrap;
+}
+.reviewBtn:hover { background: rgba(232, 71, 26, 0.1); }
+
+/* ── Skeleton ── */
+.skeleton {
+  height: 52px;
+  background: linear-gradient(90deg, var(--color-bg-card) 25%, var(--color-bg-elevated) 50%, var(--color-bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-sm);
+  margin: 4px 0;
+  display: block;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Empty ── */
+.emptyState {
+  padding: var(--space-8);
+  text-align: center;
+}
+.emptyTitle {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
+}
+.emptySubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}

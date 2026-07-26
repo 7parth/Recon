@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Implementation
+Blocked — Supabase DB password reset required (Issue 03)
 
 ## Current Goal
 
-Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storage for documents, AsyncPostgresSaver for LangGraph checkpoints
+Fix Supabase DB credentials (Issue 03), run Alembic migrations against live DB, smoke-test full end-to-end pipeline with real Postgres persistence.
 
 ## Completed
 
@@ -93,31 +93,42 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 - **`app/api/routes/history.py`** — Added `GET /history` and `GET /history/{thread_id}` for persistence tracking (Phase 8)
 - **`app/main.py`** — Registered new routers
 
-### Frontend UI & API Integration ✅
-- **Scaffold & Design System:** Vite + React + TypeScript setup with `index.css` adhering to factory-style terminal aesthetic (`02-reference-theme.md`).
-- **Dashboard Layout:** `TopNav`, `Sidebar`, and `AppShell` with reactive components (`MatchScoreRing`, `PipelineStepper`, `PipelineRun`).
-- **Data Fetching:** Custom React hooks (`useDashboardData`, `usePipelineRun`) integrating with FastAPI endpoints (`getHistory`, `getRunStatus`).
-- **Live Polling:** Polling mechanism implemented in `usePipelineRun` to animate the stepper graph sequentially based on active run status.
-- **Start Run Flow:** Modal UI supporting file uploads to Supabase Storage via FastAPI proxy (`POST /resume/parse`) and dispatching runs.
+### Phase 10: Frontend Subpages ✅
+- **`JobSearchPage.tsx`** — Search live listings via DDG, `GET /jobs/search`, Copy URL flow
+- **`ResumesPage.tsx`** — Card grid of all app runs with original + tailored resume download links
+- **`ProfilePage.tsx`** — Candidate identity form (name, email, phone, LinkedIn, portfolio); localStorage
 
-### Human Review UI ✅
-- **`ReviewQueuePage.tsx`:** Full-screen list view of all pending applications dynamically mapping over `api.getHistory()`.
-- **`ReviewDetail.tsx`:** Split-pane interface providing job context (ATS Keyword pills) alongside a tabbed preview (`Tabs.tsx`) of the Tailored Resume and Cover Letter.
-- **Review Actions:** Implemented Approve and Reject feedback flows interacting with `api.approveRun()`.
+### Phase 11 & 12: Remaining Frontend Pages ✅
+All "under construction" stubs replaced with full pages. `Stubs.tsx` now only holds `History` (redirect).
+
+- **`ApplicationsPage.tsx`** — Full applications table: search, status filter, sort by date/score, inline Review link, document download links
+- **`ActivityPage.tsx`** — Chronological event timeline derived from `useDashboardData` history; animated status nodes
+- **`KeywordsPage.tsx`** — Skills & keyword tag cloud; add/remove/save with localStorage; used by ATS audit agent
+- **`SettingsPage.tsx`** — Preferences page: match threshold slider, auto-apply toggle, NVIDIA model dropdown, embedding model input; localStorage
+- **`IntegrationsPage.tsx`** — API key reference cards (NVIDIA + Supabase); `.env.example` code block; copy-env-var buttons
+- **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
+- **`AutomationLogsPage.tsx`** — Terminal-style Playwright log viewer; per-level filter (INFO/DEBUG/WARN/ERROR/SUCCESS); animated replay playback
+- **`ATSPlatformsPage.tsx`** — Platform cards (Greenhouse ✅, Lever ✅, Workday 🟡, Ashby 🟡, SmartRecruiters 🟡, LinkedIn/Indeed 📋) with implementation status
+
+### Phase 13 & 14: Sidebar Wiring ✅
+- **`Sidebar.tsx`** — Review Queue badge now driven live from `useDashboardData` (`stats.in_review`); hides when count is 0
+- **`Sidebar.tsx`** — Footer user name / initials / email pulled from `recon_profile` localStorage (set via ProfilePage)
+
+### Issues Resolved
+- **Issue 03** — Supabase PgBouncer circuit breaker triggered by wrong DB password (`SecretPass123!` placeholder). **Graceful fallback implemented**: `app.main` lifespan catches the connection timeout and falls back to `MemorySaver` — server starts cleanly and all non-DB routes work. **Action required**: reset DB password in Supabase dashboard, update `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` in `backend/.env`.
 
 ## In Progress
 
-- **Phase 10: Outstanding Frontend Subpages**
-  - Replace stubs for `Resumes` and `Profile` with actual UI layouts.
-  - Implement the `JobSearch` UI using the `GET /jobs/search` endpoint.
+- **Issue 03** — Reset Supabase DB password → update `.env` → re-run Alembic migrations → re-smoke-test.
+- **History page** — Currently a redirect to `/applications`. Full dedicated view deferred.
+- **AutomationLogs live stream** — Page uses demo data; needs real log endpoint from backend.
 
 ## Next Up
 
-- **Phase 11: Automation Layer UI**
-  - Integrate Playwright browser automation logs.
-  - Build out `AutomationLogs` and `Integrations` subpages.
-- **Phase 12: Auth & Settings**
-  - Build `Settings` page for user management and API key storage.
+- **Issue 03 (BLOCKED)** — Fix DB password → re-run migrations → smoke-test full pipeline with Postgres.
+- **Phase 15: Automation Layer** — Full Playwright flows for Workday, Ashby, SmartRecruiters (Sprint 3/4).
+- **Phase 16: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage.
+- **Phase 17: AutomationLogs live stream** — Backend log endpoint + SSE or polling for real Playwright traces.
 
 ## Open Questions
 
@@ -141,18 +152,23 @@ Supabase integration — async SQLAlchemy + Supabase PostgreSQL, Supabase Storag
 ## Git
 
 - `main` — stable baseline (2 commits: scaffold + gitignore)
-- `dev`  — active development (6 commits)
+- `dev`  — active development
   - `00a2cf4` — tool layer + parsing agents
   - `f332d97` — remaining agents (tailoring, review, apply, tracking)
   - `2348fbd` — browser.py, search.py, automation stubs
   - `fcbc574` — FastAPI layer + project-overview update
   - `1811d9d` — fix: issue 01 (duckduckgo-search dep fix, NVIDIA_MODEL env var)
-  - `HEAD`    — in progress: issue 02 (Supabase integration)
+  - `d02b280` — fix: graceful DB fallback + faster connection timeout
+  - `ba4c972` — feat: phase 10 — JobSearch, Resumes, Profile pages
+  - `HEAD`    — feat: phases 11–14 — all remaining frontend pages + sidebar wiring
 
 ## Session Notes
 
 Entire backend graph + API layer implemented in session 1.
 Server smoke-tested live: uvicorn started, `/resume/parse` hit with real PDF → 200 OK, 5,418 chars extracted.
 **Issue 01 Resolved:** Fixed missing `duckduckgo-search` dependency. Moved hardcoded LLM model to `NVIDIA_MODEL` env var.
-**Issue 02 In Progress:** Migrating from raw PostgreSQL to Supabase (hosted Postgres + Storage + AsyncPostgresSaver).
-All work on `dev` branch — ready for DB layer then PR to `main`.
+**Issue 02 Resolved:** Supabase integration complete — async SQLAlchemy, Supabase Storage, AsyncPostgresSaver all wired.
+**Issue 03 Active:** DB password placeholder (`SecretPass123!`) causing PgBouncer circuit breaker. Graceful MemorySaver fallback in place — server runs, all non-DB routes functional. Fix: reset password in Supabase dashboard.
+**Session 2:** Full frontend implemented: Dashboard, ReviewQueue, ReviewDetail, JobSearch, Resumes, Profile.
+**Session 3:** All remaining stub pages — Applications, Activity, Keywords, Settings, Integrations, SavedJobs, AutomationLogs, ATSPlatforms. Zero TypeScript errors.
+**Session 3 (cont):** Sidebar wired — review badge live from API, footer from localStorage profile.
