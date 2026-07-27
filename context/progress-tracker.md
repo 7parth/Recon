@@ -53,8 +53,8 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
 - **`app/automation/lever.py`** — full Playwright form fill + resume upload via `BrowserSession`
 - **`app/automation/workday.py`** — stub (Sprint 4)
 - **`app/automation/ashby.py`** — stub (Sprint 4)
-- **`app/automation/smartrecruiters.py`** — stub (Sprint 4)
-- **`app/automation/dispatcher.py`** — empty file (needs implementation)
+- **`app/automation/smartrecruiters.py`** — stub (Phase 17)
+- **`app/automation/dispatcher.py`** ✅ — URL-pattern platform detection + dispatch to correct module + AutomationLogger integration
 
 ### FastAPI Layer ✅ Smoke-tested
 - **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
@@ -63,6 +63,7 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
 - **`app/api/routes/review.py`** — `GET /runs/{id}/review` (`graph.aget_state()`), `POST /runs/{id}/approve` (`graph.ainvoke()` resume)
 - **`app/api/routes/jobs.py`** — `GET /jobs/search` (DDG proxy)
 - **`app/api/routes/history.py`** — `GET /history`, `GET /history/{thread_id}`
+- **`app/api/routes/logs.py`** ✅ — `GET /runs/{id}/logs` (snapshot), `GET /runs/{id}/logs/stream` (SSE)
 - **`app/main.py`** — lifespan factory, CORS, `/api/v1` prefix, startup/shutdown hooks, graceful MemorySaver fallback
 - **Smoke test passed** — `uvicorn` started cleanly; `POST /api/v1/resume/parse` returned `200 OK` with 5,418 chars extracted from a real PDF
 
@@ -78,14 +79,16 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
 - **`backend/.env.example`** — Supabase env vars added
 - **Alembic migrations** — initial schema created
 
-### Utility Stubs (empty files — to be implemented)
-- **`app/utils/logger.py`** — empty (structured JSON logging for automation events)
-- **`app/vectorstore/faiss.py`** — empty (FAISS vector store)
-- **`app/vectorstore/indexing.py`** — empty (indexing pipeline)
-- **`app/workers/celery_app.py`** — empty (Celery app config)
-- **`app/workers/application_tasks.py`** — empty (Celery tasks)
-- **`app/workers/indexing_tasks.py`** — empty (Celery indexing tasks)
-- **`app/automation/dispatcher.py`** — empty (ATS platform dispatch logic)
+### Utility Layer (filled in Session 4)
+- **`app/utils/logger.py`** ✅ — `AutomationLogger` with in-memory buffer + SSE pub/sub queues; `get_logs()`, `subscribe()`, `unsubscribe()`
+- **`app/automation/dispatcher.py`** ✅ — URL-pattern ATS detection (`detect_platform`) + `dispatch()` with AutomationLogger
+
+### Utility Stubs (still empty — post-MVP)
+- **`app/vectorstore/faiss.py`** — FAISS vector store
+- **`app/vectorstore/indexing.py`** — indexing pipeline
+- **`app/workers/celery_app.py`** — Celery app config
+- **`app/workers/application_tasks.py`** — Celery tasks
+- **`app/workers/indexing_tasks.py`** — Celery indexing tasks
 
 ### Docs
 - **`context/project-overview.md`** — Technical Architecture section: stack table, pipeline diagram, state table, key decisions, repo layout
@@ -108,19 +111,17 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
 - **`SettingsPage.tsx`** — Match threshold slider, auto-apply toggle, NVIDIA model dropdown, embedding model input; localStorage
 - **`IntegrationsPage.tsx`** — API key reference cards (NVIDIA + Supabase); `.env.example` code block; copy-env-var buttons
 - **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
-- **`AutomationLogsPage.tsx`** — Terminal-style Playwright log viewer; per-level filter; demo data (needs live backend)
+- **`AutomationLogsPage.tsx`** ✅ — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot; replay animation; per-level filter
 - **`ATSPlatformsPage.tsx`** — Platform cards (Greenhouse ✅, Lever ✅, Workday 🟡, Ashby 🟡, SmartRecruiters 🟡, LinkedIn/Indeed 📋)
+- **`HistoryPage.tsx`** ✅ — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav; replaces Stubs.tsx redirect
 - **Sidebar** — Review Queue badge live from `useDashboardData`; footer user name/email from `recon_profile` localStorage
-- **`Stubs.tsx`** — Only `History` remains as a redirect stub → `/applications`
+- **`Stubs.tsx`** — Fully superseded; no routes point to it
 
 ---
 
 ## In Progress
 
 - **Issue 03** — Supabase DB password reset still required. MemorySaver fallback active; all non-DB routes functional.
-- **`app/automation/dispatcher.py`** — Empty stub; ATS platform dispatch logic unimplemented.
-- **History page** — `history` route is a redirect to `/applications`. Full dedicated page deferred.
-- **AutomationLogs live stream** — Page uses demo data; backend SSE log endpoint not yet implemented.
 
 ---
 
@@ -129,21 +130,18 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
 | # | Item | Depends On |
 |---|------|------------|
 | 1 | **Issue 03** — Reset Supabase DB password → update `.env` → re-run Alembic migrations → smoke-test with real Postgres | User action (Supabase dashboard) |
-| 2 | **Phase 15: AutomationLogs live stream** — Backend SSE `GET /runs/{id}/logs` endpoint + frontend polling/EventSource | — |
-| 3 | **Phase 16: History page** — Replace redirect stub with dedicated filtered timeline view | — |
-| 4 | **Phase 17: Workday, Ashby, SmartRecruiters Playwright automation** | Sprint 4 |
-| 5 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | Issue 03 fixed |
-| 6 | **`app/automation/dispatcher.py`** — Wire ATS platform detection → correct automation module | Phase 17 progress |
-| 7 | **`app/utils/logger.py`** — Structured JSON logging for Playwright automation events | Phase 15 |
-| 8 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
+| 2 | **Phase 17: Workday, Ashby, SmartRecruiters Playwright automation** | Sprint 4 |
+| 3 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | Issue 03 fixed |
+| 4 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | Issue 03 fixed |
+| 5 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
 
 ---
 
 ## Open Questions
 
 - **Supabase DB password**: Reset pending (Issue 03). User must reset in Supabase dashboard → update `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` in `backend/.env`.
-- **AutomationLogs storage**: Should logs be stored in DB (durable, replayable) or a process-local buffer (simpler)? DB preferred.
-- **History page scope**: Mirror of Applications table (same data, different UX) vs. true event log (all state transitions per run)?
+- **AutomationLogs storage**: Chosen **process-local in-memory buffer** (simpler, zero deps). Logs survive within a single server process but are lost on restart. DB persistence deferred to post-MVP (Phase 18).
+- ~~History page scope~~ **Resolved**: Implemented as expandable per-run state-transition timeline (distinct from ApplicationsPage table).
 
 ---
 
@@ -173,7 +171,8 @@ Session 4 — Resume from Issue 03 fix + tackle next open items
   - `d02b280` — fix: graceful DB fallback + faster connection timeout
   - `ba4c972` — feat: phase 10 — JobSearch, Resumes, Profile pages
   - `62a03ee` — feat: phases 11-14 — all remaining frontend pages + dynamic sidebar
-  - `a6980c4` — docs: update progress tracker — issue 03, phases 13-14, git branch correction ← HEAD
+  - `a6980c4` — docs: update progress tracker — issue 03, phases 13-14, git branch correction
+  - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled ← HEAD
 - `dev` — stale branch (ahead of initial scaffold; superseded by main)
 
 ---
@@ -190,4 +189,11 @@ Issue 03 active: DB password placeholder (`SecretPass123!`) causing PgBouncer ci
 
 **Session 3:** All remaining stub pages — Applications, Activity, Keywords, Settings, Integrations, SavedJobs, AutomationLogs, ATSPlatforms. Zero TypeScript errors. Sidebar wired — review badge live from API, footer from localStorage profile.
 
-**Session 4 (current):** Full project-state audit. Identified 7 empty utility/worker stub files. Confirmed all 15 frontend pages implemented. Confirmed Greenhouse + Lever automation complete. Prioritized next steps: Issue 03 DB fix → AutomationLogs SSE → History page → Workday/Ashby/SmartRecruiters automation → Auth sync.
+**Session 4:** Full project-state audit. Identified empty utility stubs. Implemented:
+- `app/utils/logger.py` — `AutomationLogger` + in-memory log buffer + SSE pub/sub
+- `app/automation/dispatcher.py` — URL-pattern ATS detection + dispatch
+- `app/api/routes/logs.py` — `GET /runs/{id}/logs` + `GET /runs/{id}/logs/stream` (SSE)
+- `AutomationLogsPage.tsx` — wired to live SSE; run selector; LIVE pulse indicator
+- `HistoryPage.tsx` — full dedicated page; expandable per-run state-transition timeline
+- `App.tsx` — `history` route now serves `HistoryPage`; `Stubs.tsx` fully retired
+- Zero TypeScript errors · uv import check passed · git commit `29917e1`
