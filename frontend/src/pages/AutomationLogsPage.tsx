@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useDashboardData } from '../hooks/useDashboardData';
 import styles from './AutomationLogsPage.module.css';
 
-/* ── Simulated log stream derived from application history ── */
+/* ── Types ── */
 
 interface LogEntry {
   id: string;
+  thread_id: string;
   ts: string;
   level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS' | 'DEBUG';
   message: string;
@@ -12,26 +14,8 @@ interface LogEntry {
 }
 
 const DEMO_LOGS: LogEntry[] = [
-  { id: '1',  ts: '12:04:01.332', level: 'INFO',    message: 'BrowserSession.start() — launching Playwright Chromium', context: 'greenhouse.py' },
-  { id: '2',  ts: '12:04:01.891', level: 'INFO',    message: 'Navigating to job application URL', context: 'greenhouse.py' },
-  { id: '3',  ts: '12:04:02.441', level: 'INFO',    message: 'Detected platform: Greenhouse', context: '_detect_platform' },
-  { id: '4',  ts: '12:04:02.892', level: 'DEBUG',   message: 'safe_fill(#first_name) → "Parth"', context: 'browser.py' },
-  { id: '5',  ts: '12:04:03.011', level: 'DEBUG',   message: 'safe_fill(#last_name) → "Shah"', context: 'browser.py' },
-  { id: '6',  ts: '12:04:03.198', level: 'DEBUG',   message: 'safe_fill(#email) → "parth@example.com"', context: 'browser.py' },
-  { id: '7',  ts: '12:04:03.401', level: 'DEBUG',   message: 'safe_fill(#phone) → "+1 (555) 000-0000"', context: 'browser.py' },
-  { id: '8',  ts: '12:04:04.012', level: 'INFO',    message: 'upload_file(resume_input, tailored_resume.pdf)', context: 'browser.py' },
-  { id: '9',  ts: '12:04:05.223', level: 'INFO',    message: 'Waiting for upload confirmation…', context: 'greenhouse.py' },
-  { id: '10', ts: '12:04:06.001', level: 'SUCCESS', message: 'Resume uploaded successfully', context: 'greenhouse.py' },
-  { id: '11', ts: '12:04:06.334', level: 'DEBUG',   message: 'safe_fill(#linkedin_url) → "https://linkedin.com/in/parth"', context: 'browser.py' },
-  { id: '12', ts: '12:04:07.120', level: 'INFO',    message: 'safe_click(#submit_application)', context: 'browser.py' },
-  { id: '13', ts: '12:04:08.441', level: 'SUCCESS', message: 'Application submitted — Greenhouse confirmation detected', context: 'greenhouse.py' },
-  { id: '14', ts: '12:04:08.443', level: 'INFO',    message: 'BrowserSession.close()', context: 'browser.py' },
-  { id: '15', ts: '12:04:08.450', level: 'INFO',    message: 'submission_status → "applied"', context: 'apply_agent.py' },
-];
-
-const EMPTY_LOGS: LogEntry[] = [
-  { id: 'e1', ts: '--:--:--.---', level: 'INFO', message: 'No automation runs recorded yet.', context: 'system' },
-  { id: 'e2', ts: '--:--:--.---', level: 'INFO', message: 'Logs appear here after a pipeline run reaches the Apply Agent.', context: 'system' },
+  { id: 'e1', thread_id: 'demo', ts: '--:--:--.---', level: 'INFO', message: 'No active automation runs yet.', context: 'system' },
+  { id: 'e2', thread_id: 'demo', ts: '--:--:--.---', level: 'INFO', message: 'Select a run below and approve it to trigger automation.', context: 'system' },
 ];
 
 const LEVEL_COLORS: Record<LogEntry['level'], string> = {
@@ -60,17 +44,131 @@ function LogRow({ entry, visible }: { entry: LogEntry; visible: boolean }) {
   );
 }
 
+/* ── Run selector ── */
+function RunSelector({
+  runs,
+  selected,
+  onSelect,
+}: {
+  runs: { thread_id: string; status: string; created_at: string }[];
+  selected: string;
+  onSelect: (id: string) => void;
+}) {
+  if (runs.length === 0) return null;
+  return (
+    <div className={styles.runSelector}>
+      <label className={`${styles.runLabel} mono`}>Run</label>
+      <select
+        id="log-run-select"
+        className={styles.runSelect}
+        value={selected}
+        onChange={e => onSelect(e.target.value)}
+      >
+        {runs.map(r => {
+          const date = new Date(r.created_at).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+          });
+          return (
+            <option key={r.thread_id} value={r.thread_id}>
+              {r.thread_id.slice(0, 8)}… · {r.status} · {date}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
+}
+
+/* ── Main page ── */
 export function AutomationLogsPage() {
+  const { history, loading } = useDashboardData();
   const [filter, setFilter] = useState<'ALL' | LogEntry['level']>('ALL');
-  const [visibleCount, setVisibleCount] = useState(0);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [liveCount, setLiveCount] = useState(0);   // entries received via SSE (not replay)
+  const [selectedThread, setSelectedThread] = useState('');
+  const [connected, setConnected] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  const esRef = useRef<EventSource | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const hasRuns = true; // flip to false to show empty state
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const logs = hasRuns ? DEMO_LOGS : EMPTY_LOGS;
-  const filtered = filter === 'ALL' ? logs : logs.filter(l => l.level === filter);
+  // ── Derive runs list from history (only runs that went through automation) ──
+  const allRuns = history.map(r => ({
+    thread_id: r.thread_id,
+    status: (r as any).status || (r as any).submission_status || 'unknown',
+    created_at: r.created_at,
+  }));
 
+  // Auto-select first run
+  useEffect(() => {
+    if (!selectedThread && allRuns.length > 0) {
+      setSelectedThread(allRuns[0].thread_id);
+    }
+  }, [allRuns.length]);
+
+  // ── SSE connection ─────────────────────────────────────────────────────────
+  const connectSSE = useCallback((threadId: string) => {
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+    }
+
+    setLogs([]);
+    setLiveCount(0);
+    setConnected(false);
+
+    if (!threadId) return;
+
+    // First fetch buffered snapshot via JSON (fast, no streaming overhead)
+    fetch(`/api/v1/runs/${threadId}/logs`)
+      .then(r => r.json())
+      .then((data: { entries: LogEntry[] }) => {
+        if (data.entries?.length > 0) {
+          setLogs(data.entries);
+          setVisibleCount(data.entries.length);
+        }
+      })
+      .catch(() => {/* ignore if run has no logs yet */});
+
+    // Then open SSE for live updates
+    const es = new EventSource(`/api/v1/runs/${threadId}/logs/stream`);
+    esRef.current = es;
+
+    es.onopen = () => setConnected(true);
+
+    es.onmessage = (e: MessageEvent) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'log') {
+          setLogs(prev => [...prev, data as LogEntry]);
+          setLiveCount(c => c + 1);
+          setVisibleCount(c => c + 1);
+        }
+      } catch {/* ignore malformed */}
+    };
+
+    es.onerror = () => setConnected(false);
+
+    return () => { es.close(); };
+  }, []);
+
+  useEffect(() => {
+    if (selectedThread) {
+      return connectSSE(selectedThread);
+    }
+  }, [selectedThread, connectSSE]);
+
+  // Cleanup on unmount
+  useEffect(() => () => { esRef.current?.close(); }, []);
+
+  // Auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [visibleCount]);
+
+  // ── Replay animation (only for historical snapshot) ──────────────────────
   function startPlayback() {
     setVisibleCount(0);
     setPlaying(true);
@@ -78,10 +176,7 @@ export function AutomationLogsPage() {
 
   useEffect(() => {
     if (!playing) return;
-    if (visibleCount >= logs.length) {
-      setPlaying(false);
-      return;
-    }
+    if (visibleCount >= logs.length) { setPlaying(false); return; }
     intervalRef.current = setInterval(() => {
       setVisibleCount(c => {
         if (c >= logs.length) {
@@ -91,15 +186,15 @@ export function AutomationLogsPage() {
         }
         return c + 1;
       });
-    }, 120);
+    }, 100);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [playing, logs.length]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [visibleCount]);
-
+  // ── Filter ────────────────────────────────────────────────────────────────
+  const filtered = filter === 'ALL' ? logs : logs.filter(l => l.level === filter);
   const FILTERS: Array<'ALL' | LogEntry['level']> = ['ALL', 'INFO', 'DEBUG', 'WARN', 'ERROR', 'SUCCESS'];
+
+  const displayLogs = (logs.length === 0 && !loading) ? DEMO_LOGS : filtered;
 
   return (
     <div className={styles.page}>
@@ -109,6 +204,11 @@ export function AutomationLogsPage() {
           Playwright browser automation trace — every form fill, upload, and click.
         </p>
       </div>
+
+      {/* Run selector */}
+      {!loading && (
+        <RunSelector runs={allRuns} selected={selectedThread} onSelect={setSelectedThread} />
+      )}
 
       {/* Toolbar */}
       <div className={styles.toolbar}>
@@ -126,8 +226,16 @@ export function AutomationLogsPage() {
           ))}
         </div>
         <div className={styles.toolbarRight}>
-          <span className={`${styles.lineCount} mono`}>{filtered.length} lines</span>
-          {hasRuns && (
+          {connected && (
+            <span className={`${styles.liveIndicator} mono`}>
+              <span className={styles.liveDot} />LIVE
+            </span>
+          )}
+          {liveCount > 0 && (
+            <span className={`${styles.lineCount} mono`}>+{liveCount} new</span>
+          )}
+          <span className={`${styles.lineCount} mono`}>{displayLogs.length} lines</span>
+          {logs.length > 0 && (
             <button
               id="log-replay-btn"
               className={styles.replayBtn}
@@ -148,10 +256,12 @@ export function AutomationLogsPage() {
             <span className={styles.dot} style={{ background: '#FFBD2E' }} />
             <span className={styles.dot} style={{ background: '#27C93F' }} />
           </div>
-          <span className={`${styles.terminalTitle} mono`}>recon / automation / browser.log</span>
+          <span className={`${styles.terminalTitle} mono`}>
+            recon / automation / {selectedThread ? `${selectedThread.slice(0, 8)}.log` : 'browser.log'}
+          </span>
         </div>
         <div className={styles.terminalBody}>
-          {filtered.map((entry, i) => (
+          {displayLogs.map((entry, i) => (
             <LogRow
               key={entry.id}
               entry={entry}

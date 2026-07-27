@@ -16,7 +16,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, application, review, jobs, history
+from app.api.routes import health, application, review, jobs, history, logs
 
 # ── Logging configuration ─────────────────────────────────────────────────────
 # Configure once at startup — all modules use logging.getLogger(__name__)
@@ -103,6 +103,7 @@ def create_app() -> FastAPI:
     app.include_router(review.router,      prefix="/api/v1") # GET  /api/v1/runs/{id}/review, etc.
     app.include_router(jobs.router,        prefix="/api/v1") # GET  /api/v1/jobs/search
     app.include_router(history.router,     prefix="/api/v1") # GET  /api/v1/history
+    app.include_router(logs.router,        prefix="/api/v1") # GET  /api/v1/runs/{id}/logs[/stream]
 
     return app
 

@@ -14,7 +14,7 @@ import { IntegrationsPage } from './pages/IntegrationsPage';
 import { SavedJobsPage } from './pages/SavedJobsPage';
 import { AutomationLogsPage } from './pages/AutomationLogsPage';
 import { ATSPlatformsPage } from './pages/ATSPlatformsPage';
-import { History } from './pages/Stubs';
+import { HistoryPage } from './pages/HistoryPage';
 
 function App() {
   return (
@@ -26,7 +26,7 @@ function App() {
           <Route path="applications" element={<ApplicationsPage />} />
           <Route path="review" element={<ReviewQueuePage />} />
           <Route path="review/:threadId" element={<ReviewDetail />} />
-          <Route path="history" element={<History />} />
+          <Route path="history" element={<HistoryPage />} />
           <Route path="resumes" element={<ResumesPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="keywords" element={<KeywordsPage />} />
