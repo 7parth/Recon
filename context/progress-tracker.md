@@ -2,14 +2,13 @@
 
 ## Current Phase
 
-Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent refactor
+Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smoke-tested
 
 ## Current Goal
 
-1. Implement full Playwright automation for Workday, Ashby, and SmartRecruiters.
-2. Refactor `apply_agent.py` to use the shared `dispatcher.dispatch()` (remove duplication).
-3. ATSPlatformsPage — update platform status badges to reflect new implementations.
-4. Issue 03 — blocked on user Supabase dashboard action (no change needed from code side).
+1. Phase 18: Auth & Settings sync — persist settings/profile to Supabase user record.
+2. Log durability — persist `AutomationLogger` entries to DB so logs survive server restart.
+3. Continue building toward full end-to-end run.
 
 ---
 
@@ -97,6 +96,7 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 ### Issues Resolved
 - **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
 - **Issue 02** — Supabase integration complete — async SQLAlchemy, Supabase Storage, AsyncPostgresSaver all wired
+- **Issue 03** ✅ — Supabase DB password reset by user; `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` updated in `.env`; `alembic current` confirmed at HEAD (`ecca31836228`); live DB verified: 10 tables present, 2 existing `applications` records readable, `AsyncPostgresSaver` connects cleanly. MemorySaver fallback no longer needed.
 - **Issue 04** — Graceful MemorySaver fallback implemented; connection timeout reduced; server starts cleanly even with bad DB creds
 
 ### Frontend — All Pages Implemented ✅
@@ -122,7 +122,8 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 
 ## In Progress
 
-- **Issue 03** — Supabase DB password reset still required. MemorySaver fallback active; all non-DB routes functional.
+- **Phase 18** — Auth & Settings sync to Supabase (no longer blocked by Issue 03).
+- **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart.
 
 ---
 
@@ -130,9 +131,9 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **Issue 03** — Reset Supabase DB password → update `.env` → re-run Alembic migrations → smoke-test with real Postgres | User action (Supabase dashboard) |
-| 2 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | Issue 03 fixed |
-| 3 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | Issue 03 fixed |
+| 1 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | — |
+| 2 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | — |
+| 3 | **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB persistence | — |
 | 4 | **LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific automation | Sprint 5 |
 | 5 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
 
@@ -140,8 +141,8 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 
 ## Open Questions
 
-- **Supabase DB password**: Reset pending (Issue 03). User must reset in Supabase dashboard → update `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` in `backend/.env`.
-- **AutomationLogs storage**: Chosen **process-local in-memory buffer** (simpler, zero deps). Logs survive within a single server process but are lost on restart. DB persistence deferred to post-MVP (Phase 18).
+- **Supabase DB password**: ✅ Resolved — user reset in Supabase dashboard; `.env` updated; live connection verified (10 tables, `AsyncPostgresSaver` OK).
+- **AutomationLogs storage**: Chosen **process-local in-memory buffer** (simpler, zero deps). Logs survive within a single server process but are lost on restart. DB persistence deferred to Phase 18.
 - ~~History page scope~~ **Resolved**: Implemented as expandable per-run state-transition timeline (distinct from ApplicationsPage table).
 
 ---
@@ -198,3 +199,12 @@ Issue 03 active: DB password placeholder (`SecretPass123!`) causing PgBouncer ci
 - `app/graph/agents/apply_agent.py` — refactored: delegates to `dispatcher.dispatch()`, threads `thread_id` for SSE
 - `ATSPlatformsPage.tsx` — Workday/Ashby/SmartRecruiters promoted to implemented (green cards)
 - Zero TS errors · uv import check passed · git commit `ece0233` · pushed main + dev
+
+**Session 5b:** Issue 03 resolved — Supabase DB fully operational:
+- User reset DB password in Supabase dashboard
+- `.env` `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` already updated with new credentials
+- `alembic current` → `ecca31836228 (head)` ✅
+- Live DB: 10 tables present (`applications`, `companies`, `jobs`, `resumes`, `reviews`, `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `alembic_version`)
+- `ApplicationRepository.list_all()` returned 2 existing records ✅
+- `AsyncPostgresSaver.from_conn_string()` connected cleanly ✅
+- MemorySaver fallback no longer needed; full Postgres persistence active
