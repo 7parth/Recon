@@ -51,10 +51,11 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 ### Automation Layer
 - **`app/automation/greenhouse.py`** — full Playwright form fill + resume upload via `BrowserSession`
 - **`app/automation/lever.py`** — full Playwright form fill + resume upload via `BrowserSession`
-- **`app/automation/workday.py`** — stub (Sprint 4)
-- **`app/automation/ashby.py`** — stub (Sprint 4)
-- **`app/automation/smartrecruiters.py`** — stub (Phase 17)
+- **`app/automation/workday.py`** ✅ — `data-automation-id` selectors, multi-step wizard navigation, resume upload + fallback, cover letter, confirmation detection
+- **`app/automation/ashby.py`** ✅ — Apply button click, standard HTML5 form fill, label-proximity cover letter fallback, confirmation
+- **`app/automation/smartrecruiters.py`** ✅ — Apply Now click, personal info, styled-button upload fallback, cover letter, URL+element confirmation
 - **`app/automation/dispatcher.py`** ✅ — URL-pattern platform detection + dispatch to correct module + AutomationLogger integration
+- **`app/graph/agents/apply_agent.py`** ✅ — Refactored: uses `dispatcher.dispatch()`, threads `thread_id` for SSE logging, removed duplicate detection logic
 
 ### FastAPI Layer ✅ Smoke-tested
 - **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
@@ -112,7 +113,7 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 - **`IntegrationsPage.tsx`** — API key reference cards (NVIDIA + Supabase); `.env.example` code block; copy-env-var buttons
 - **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
 - **`AutomationLogsPage.tsx`** ✅ — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot; replay animation; per-level filter
-- **`ATSPlatformsPage.tsx`** — Platform cards (Greenhouse ✅, Lever ✅, Workday 🟡, Ashby 🟡, SmartRecruiters 🟡, LinkedIn/Indeed 📋)
+- **`ATSPlatformsPage.tsx`** ✅ — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅, LinkedIn/Indeed 📋 — 5/5 automation completed
 - **`HistoryPage.tsx`** ✅ — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav; replaces Stubs.tsx redirect
 - **Sidebar** — Review Queue badge live from `useDashboardData`; footer user name/email from `recon_profile` localStorage
 - **`Stubs.tsx`** — Fully superseded; no routes point to it
@@ -130,9 +131,9 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
 | # | Item | Depends On |
 |---|------|------------|
 | 1 | **Issue 03** — Reset Supabase DB password → update `.env` → re-run Alembic migrations → smoke-test with real Postgres | User action (Supabase dashboard) |
-| 2 | **Phase 17: Workday, Ashby, SmartRecruiters Playwright automation** | Sprint 4 |
-| 3 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | Issue 03 fixed |
-| 4 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | Issue 03 fixed |
+| 2 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | Issue 03 fixed |
+| 3 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | Issue 03 fixed |
+| 4 | **LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific automation | Sprint 5 |
 | 5 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
 
 ---
@@ -172,7 +173,8 @@ Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent
   - `ba4c972` — feat: phase 10 — JobSearch, Resumes, Profile pages
   - `62a03ee` — feat: phases 11-14 — all remaining frontend pages + dynamic sidebar
   - `a6980c4` — docs: update progress tracker — issue 03, phases 13-14, git branch correction
-  - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled ← HEAD
+  - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled
+  - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor ← HEAD
 - `dev` — stale branch (ahead of initial scaffold; superseded by main)
 
 ---
@@ -189,11 +191,10 @@ Issue 03 active: DB password placeholder (`SecretPass123!`) causing PgBouncer ci
 
 **Session 3:** All remaining stub pages — Applications, Activity, Keywords, Settings, Integrations, SavedJobs, AutomationLogs, ATSPlatforms. Zero TypeScript errors. Sidebar wired — review badge live from API, footer from localStorage profile.
 
-**Session 4:** Full project-state audit. Identified empty utility stubs. Implemented:
-- `app/utils/logger.py` — `AutomationLogger` + in-memory log buffer + SSE pub/sub
-- `app/automation/dispatcher.py` — URL-pattern ATS detection + dispatch
-- `app/api/routes/logs.py` — `GET /runs/{id}/logs` + `GET /runs/{id}/logs/stream` (SSE)
-- `AutomationLogsPage.tsx` — wired to live SSE; run selector; LIVE pulse indicator
-- `HistoryPage.tsx` — full dedicated page; expandable per-run state-transition timeline
-- `App.tsx` — `history` route now serves `HistoryPage`; `Stubs.tsx` fully retired
-- Zero TypeScript errors · uv import check passed · git commit `29917e1`
+**Session 5:** Phase 17 complete — 5/5 ATS platforms now fully automated. Implemented:
+- `app/automation/workday.py` — multi-step wizard + `data-automation-id` selectors + confirmation detection
+- `app/automation/ashby.py` — Apply button + label-proximity cover letter + confirmation
+- `app/automation/smartrecruiters.py` — Apply Now + styled-button upload fallback + URL/element confirmation
+- `app/graph/agents/apply_agent.py` — refactored: delegates to `dispatcher.dispatch()`, threads `thread_id` for SSE
+- `ATSPlatformsPage.tsx` — Workday/Ashby/SmartRecruiters promoted to implemented (green cards)
+- Zero TS errors · uv import check passed · git commit `ece0233` · pushed main + dev
