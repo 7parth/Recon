@@ -29,26 +29,26 @@ const PLATFORMS: Platform[] = [
   {
     id: 'workday',
     name: 'Workday',
-    status: 'stub',
-    description: 'Stub implemented. Workday requires SSO/account flows — full automation deferred to Sprint 4.',
-    fields: ['Planned: first_name, last_name, email, phone, resume'],
-    color: '#F59E0B',
+    status: 'implemented',
+    description: 'Full Playwright automation — data-automation-id selectors, multi-step wizard navigation, resume upload with fallback selectors, confirmation detection.',
+    fields: ['first_name', 'last_name', 'email', 'phone', 'linkedin_url', 'resume (file)', 'cover_letter'],
+    color: '#22C55E',
   },
   {
     id: 'ashby',
     name: 'Ashby',
-    status: 'stub',
-    description: 'Stub implemented. Ashby forms are straightforward — full automation scheduled for Sprint 3.',
-    fields: ['Planned: standard profile fields + resume'],
-    color: '#F59E0B',
+    status: 'implemented',
+    description: 'Full Playwright automation — Apply button click, standard HTML5 form fill, resume upload, cover letter with label-proximity fallback, confirmation detection.',
+    fields: ['first_name', 'last_name', 'email', 'phone', 'linkedin_url', 'resume (file)', 'cover_letter'],
+    color: '#22C55E',
   },
   {
     id: 'smartrecruiters',
     name: 'SmartRecruiters',
-    status: 'stub',
-    description: 'Stub implemented. Multi-page flow — implementation scheduled for Sprint 4.',
-    fields: ['Planned: multi-step form + resume upload'],
-    color: '#F59E0B',
+    status: 'implemented',
+    description: 'Full Playwright automation — Apply Now click, personal info form fill, file upload with styled-button fallback, cover letter, submit + URL/element confirmation.',
+    fields: ['first_name', 'last_name', 'email', 'phone', 'linkedin_url', 'resume (file)', 'cover_letter'],
+    color: '#22C55E',
   },
   {
     id: 'linkedin-easy',
@@ -66,6 +66,7 @@ const PLATFORMS: Platform[] = [
     fields: ['Requires: Indeed account, variable form handling'],
     color: '#6B7280',
   },
+
 ];
 
 const STATUS_META = {

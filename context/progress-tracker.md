@@ -2,14 +2,14 @@
 
 ## Current Phase
 
-Session 4 — Resume from Issue 03 fix + tackle next open items
+Session 5 — Phase 17: Workday, Ashby, SmartRecruiters automation + apply_agent refactor
 
 ## Current Goal
 
-1. Fix Supabase DB credentials (Issue 03) — reset password, update `.env`, re-run Alembic migrations, smoke-test full end-to-end with real Postgres persistence.
-2. Build out AutomationLogs live-stream backend (SSE log endpoint).
-3. Build full History page (dedicated view replacing the redirect stub).
-4. Implement Workday, Ashby, SmartRecruiters Playwright automation (Phase 15).
+1. Implement full Playwright automation for Workday, Ashby, and SmartRecruiters.
+2. Refactor `apply_agent.py` to use the shared `dispatcher.dispatch()` (remove duplication).
+3. ATSPlatformsPage — update platform status badges to reflect new implementations.
+4. Issue 03 — blocked on user Supabase dashboard action (no change needed from code side).
 
 ---
 
