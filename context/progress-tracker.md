@@ -157,3 +157,6 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
   - `a6980c4` — docs: update progress tracker — issue 03, phases 13-14, git branch correction
   - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled
   - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor
+  - `0e2cfa5` — feat: session 6 — context-backed dashboard data, history data contract alignment, log DB persistence
+- `dev` — target branch for release pushes
+
