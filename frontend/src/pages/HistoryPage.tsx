@@ -68,8 +68,8 @@ interface TimelineEvent {
   status: 'done' | 'active' | 'skipped';
 }
 
-function buildTimeline(r: ApplicationRecord & { status?: string; rejection_feedback?: string }): TimelineEvent[] {
-  const status = r.status || (r as any).submission_status || '';
+function buildTimeline(r: ApplicationRecord & { rejection_feedback?: string }): TimelineEvent[] {
+  const status = r.status || r.submission_status || '';
   const events: TimelineEvent[] = [
     {
       key: 'started',
@@ -136,13 +136,13 @@ function buildTimeline(r: ApplicationRecord & { status?: string; rejection_feedb
 }
 
 /* ── Expandable run row ── */
-function RunRow({ record }: { record: ApplicationRecord & { status?: string; rejection_feedback?: string } }) {
+function RunRow({ record }: { record: ApplicationRecord & { rejection_feedback?: string } }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const status = record.status || (record as any).submission_status || 'unknown';
+  const status = record.status || record.submission_status || 'unknown';
   const timeline = buildTimeline({ ...record, ...(detail || {}) });
 
   async function loadDetail() {
@@ -263,7 +263,7 @@ export function HistoryPage() {
   const STATUS_FILTERS: StatusFilter[] = ['all', 'applied', 'pending', 'failed', 'skipped'];
 
   const filtered = history.filter(r => {
-    const status = (r as any).status || (r as any).submission_status || '';
+    const status = r.status || r.submission_status || '';
     const matchesStatus =
       statusFilter === 'all' ||
       status === statusFilter ||
@@ -337,7 +337,7 @@ export function HistoryPage() {
       {!loading && (
         <div className={styles.runList}>
           {filtered.map(r => (
-            <RunRow key={r.thread_id} record={r as any} />
+            <RunRow key={r.thread_id} record={r} />
           ))}
         </div>
       )}

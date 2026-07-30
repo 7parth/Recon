@@ -61,11 +61,33 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+
+# LangGraph manages these tables via AsyncPostgresSaver.setup() — never touch them.
+_LANGGRAPH_TABLES = {
+    "checkpoints",
+    "checkpoint_blobs",
+    "checkpoint_writes",
+    "checkpoint_migrations",
+}
+
+
+def _include_object(obj, name, type_, reflected, compare_to):
+    """Filter out LangGraph-managed tables from autogenerate comparison."""
+    if type_ == "table" and name in _LANGGRAPH_TABLES:
+        return False
+    return True
+
+
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=_include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 
 async def run_async_migrations() -> None:

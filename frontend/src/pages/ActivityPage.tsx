@@ -51,7 +51,7 @@ function deriveEvents(records: ApplicationRecord[]): Event[] {
         id: `${r.thread_id}-applied`,
         title: `Application submitted — ${r.job_title || 'Untitled Role'}`,
         description: `${r.company || 'Unknown company'} · Automated submission complete.`,
-        timeAgo: r.applied_at ? timeAgo(r.applied_at) : timeAgo(r.created_at),
+        timeAgo: r.updated_at ? timeAgo(r.updated_at) : timeAgo(r.created_at),
         status: 'done',
         iconType: 'apply',
       });

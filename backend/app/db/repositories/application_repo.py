@@ -126,6 +126,33 @@ class ApplicationRepository:
         )
         return await self.get_by_thread_id(thread_id)
 
+    async def update_display_fields(
+        self,
+        thread_id: str,
+        job_title: str | None = None,
+        company_name: str | None = None,
+        match_score: float | None = None,
+    ) -> ApplicationRecord | None:
+        """Persist display metadata from the final graph state.
+
+        Called by ``_run_graph`` after the pipeline finishes so the history
+        page can show job title and company without joining to the jobs table.
+        """
+        values: dict = {"updated_at": datetime.now(timezone.utc)}
+        if job_title is not None:
+            values["job_title"] = job_title
+        if company_name is not None:
+            values["company_name"] = company_name
+        if match_score is not None:
+            values["match_score"] = match_score
+
+        await self._session.execute(
+            update(ApplicationRecord)
+            .where(ApplicationRecord.thread_id == thread_id)
+            .values(**values)
+        )
+        return await self.get_by_thread_id(thread_id)
+
     async def set_document_urls(
         self,
         thread_id: str,

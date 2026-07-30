@@ -99,6 +99,18 @@ class ApplicationRecord(Base):
         comment="pending_review | approved | rejected | applied | failed | skipped",
     )
 
+    # ── Denormalised display fields (written by _run_graph / tracking_agent) ──
+    job_title: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Job title extracted by job_agent — denormalised for history reads",
+    )
+    company_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Company name extracted by company_agent — denormalised for history reads",
+    )
+
     # ── Scores ────────────────────────────────────────────────────────────────
     match_score: Mapped[float | None] = mapped_column(
         Float,

@@ -75,7 +75,7 @@ export function Dashboard() {
     company: app.company || 'Unknown Company',
     matchScore: app.match_score || 0,
     status: app.submission_status === 'skipped' ? 'skipped' : (app.approval_status === 'pending' ? 'in_review' : 'applied'),
-    appliedOn: app.applied_at ? new Date(app.applied_at).toLocaleDateString() : 'N/A',
+    appliedOn: app.updated_at ? new Date(app.updated_at).toLocaleDateString() : 'N/A',
     logoLetter: (app.company || '?').charAt(0).toUpperCase(),
     logoColor: '#333',
   }));

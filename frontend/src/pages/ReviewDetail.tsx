@@ -23,7 +23,7 @@ export function ReviewDetail() {
     if (!threadId) return;
     
     api.getReviewPayload(threadId)
-      .then(setPayload)
+      .then((data: any) => setPayload(data))
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [threadId]);
@@ -66,10 +66,10 @@ export function ReviewDetail() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logo}>{payload.company.charAt(0).toUpperCase()}</div>
+          <div className={styles.logo}>{(payload.company || payload.company_name || '?').charAt(0).toUpperCase()}</div>
           <div className={styles.jobInfo}>
-            <h1 className={styles.jobTitle}>{payload.job_title}</h1>
-            <p className={styles.companyMeta}>{payload.company} · {payload.location}</p>
+            <h1 className={styles.jobTitle}>{payload.job_title || 'Untitled Job'}</h1>
+            <p className={styles.companyMeta}>{payload.company || payload.company_name || 'Unknown Company'} · {payload.location || 'Remote'}</p>
           </div>
         </div>
         
@@ -93,13 +93,13 @@ export function ReviewDetail() {
         <div className={styles.leftPane}>
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>ATS Keyword Analysis</h3>
-            <p className={styles.subtext}>ATS Score: <strong>{payload.ats_score}%</strong></p>
+            <p className={styles.subtext}>ATS Score: <strong>{payload.ats_score || 0}%</strong></p>
             
             <div className={styles.keywordLists}>
               <div className={styles.keywordGroup}>
                 <span className={styles.groupLabel}>Found in Resume</span>
                 <div className={styles.pillContainer}>
-                  {payload.matched_keywords.length > 0 
+                  {(payload.matched_keywords && payload.matched_keywords.length > 0)
                     ? payload.matched_keywords.map(kw => <span key={kw} className={`${styles.pill} ${styles.pillMatched}`}>{kw}</span>)
                     : <span className={styles.noneText}>None found</span>
                   }
@@ -109,7 +109,7 @@ export function ReviewDetail() {
               <div className={styles.keywordGroup}>
                 <span className={styles.groupLabel}>Missing (Consider adding)</span>
                 <div className={styles.pillContainer}>
-                  {payload.missing_keywords.length > 0 
+                  {(payload.missing_keywords && payload.missing_keywords.length > 0)
                     ? payload.missing_keywords.map(kw => <span key={kw} className={`${styles.pill} ${styles.pillMissing}`}>{kw}</span>)
                     : <span className={styles.noneText}>None missing!</span>
                   }

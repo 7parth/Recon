@@ -16,7 +16,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Runs ──
 export const api = {
-  startRun: (body: { job_url?: string; job_description?: string; resume_url: string }) =>
+  startRun: (body: { job_url?: string; job_description?: string; resume_text: string; resume_storage_url?: string }) =>
     request('/runs/start', { method: 'POST', body: JSON.stringify(body) }),
 
   getRunStatus: (threadId: string) =>

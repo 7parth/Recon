@@ -198,7 +198,7 @@ export function ApplicationsPage() {
             return (
               <div key={app.thread_id} className={styles.row}>
                 <div className={styles.colPosition}>
-                  <LogoAvatar company={app.company} />
+                  <LogoAvatar company={app.company || ''} />
                   <div className={styles.positionInfo}>
                     <span className={styles.jobTitle}>{app.job_title || 'Untitled Role'}</span>
                     <span className={styles.company}>{app.company || '—'}</span>
@@ -208,7 +208,7 @@ export function ApplicationsPage() {
                   <ScorePill score={Math.round(app.match_score ?? 0)} />
                 </div>
                 <div className={styles.colStatus}>
-                  <StatusBadge status={app.approval_status === 'pending' ? 'pending' : app.submission_status} />
+                  <StatusBadge status={app.approval_status === 'pending' ? 'pending' : (app.submission_status || 'pending')} />
                 </div>
                 <div className={`${styles.colDate} mono`} style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
                   {date}

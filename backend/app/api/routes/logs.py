@@ -28,7 +28,7 @@ from typing import AsyncGenerator
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from app.utils.logger import get_logs, subscribe, unsubscribe
+from app.utils.logger import get_logs_async, subscribe, unsubscribe
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["logs"])
@@ -46,7 +46,7 @@ async def get_run_logs(thread_id: str):
     Useful for initial page load or when SSE is not available.
     Returns an empty list if no logs have been emitted yet.
     """
-    entries = get_logs(thread_id)
+    entries = await get_logs_async(thread_id)
     return {"thread_id": thread_id, "entries": entries, "count": len(entries)}
 
 
@@ -70,8 +70,8 @@ async def stream_run_logs(thread_id: str, request: Request):
     async def event_generator() -> AsyncGenerator[str, None]:
         q = subscribe(thread_id)
         try:
-            # 1. Replay buffered history
-            historical = get_logs(thread_id)
+            # 1. Replay buffered history (memory or DB)
+            historical = await get_logs_async(thread_id)
             for entry in historical:
                 payload = json.dumps({"type": "history", **entry})
                 yield f"data: {payload}\n\n"

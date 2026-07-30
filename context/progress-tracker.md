@@ -2,13 +2,12 @@
 
 ## Current Phase
 
-Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smoke-tested
+Session 6 — Data contract alignment & Log durability completed; ready for End-to-End Run Smoke Test
 
 ## Current Goal
 
-1. Phase 18: Auth & Settings sync — persist settings/profile to Supabase user record.
-2. Log durability — persist `AutomationLogger` entries to DB so logs survive server restart.
-3. Continue building toward full end-to-end run.
+1. **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB & log persistence
+2. **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage
 
 ---
 
@@ -71,35 +70,27 @@ Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smo
 - **`app/config.py`** — Supabase env vars
 - **`app/db/database.py`** — async SQLAlchemy engine via Supabase PostgreSQL connection string
 - **`app/db/supabase.py`** — Supabase async client singleton
-- **`app/db/models/`** — ORM models (`ApplicationRecord`, `Company`, `Job`, `Resume`, `Review`) with storage URL fields
-- **`app/db/repositories/`** — async repository pattern
+- **`app/db/models/`** — ORM models (`ApplicationRecord`, `Company`, `Job`, `Resume`, `Review`, `AutomationLogRecord`) with storage URL fields
+- **`app/db/repositories/`** — async repository pattern (`ApplicationRepository`, `AutomationLogRepository`)
 - **`app/storage/`** — `storage.py`, `resume_storage.py`, `document_storage.py`
 - **`app/services/storage_service.py`** — upload documents, return public URLs
 - **`app/services/checkpoint_service.py`** — AsyncPostgresSaver wired to Supabase Postgres
 - **`backend/.env.example`** — Supabase env vars added
-- **Alembic migrations** — initial schema created
+- **Alembic migrations** — initial schema (`ecca31836228`), added `job_title` & `company_name` (`8804cb3c4a4d`), added `automation_logs` (`ce969023baf9`)
 
-### Utility Layer (filled in Session 4)
-- **`app/utils/logger.py`** ✅ — `AutomationLogger` with in-memory buffer + SSE pub/sub queues; `get_logs()`, `subscribe()`, `unsubscribe()`
+### Utility Layer ✅
+- **`app/utils/logger.py`** ✅ — `AutomationLogger` with in-memory buffer + SSE broadcast + asynchronous Supabase PostgreSQL log persistence + cold-load DB fallback
 - **`app/automation/dispatcher.py`** ✅ — URL-pattern ATS detection (`detect_platform`) + `dispatch()` with AutomationLogger
-
-### Utility Stubs (still empty — post-MVP)
-- **`app/vectorstore/faiss.py`** — FAISS vector store
-- **`app/vectorstore/indexing.py`** — indexing pipeline
-- **`app/workers/celery_app.py`** — Celery app config
-- **`app/workers/application_tasks.py`** — Celery tasks
-- **`app/workers/indexing_tasks.py`** — Celery indexing tasks
-
-### Docs
-- **`context/project-overview.md`** — Technical Architecture section: stack table, pipeline diagram, state table, key decisions, repo layout
 
 ### Issues Resolved
 - **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
 - **Issue 02** — Supabase integration complete — async SQLAlchemy, Supabase Storage, AsyncPostgresSaver all wired
-- **Issue 03** ✅ — Supabase DB password reset by user; `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` updated in `.env`; `alembic current` confirmed at HEAD (`ecca31836228`); live DB verified: 10 tables present, 2 existing `applications` records readable, `AsyncPostgresSaver` connects cleanly. MemorySaver fallback no longer needed.
+- **Issue 03** ✅ — Supabase DB password reset by user; `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` updated in `.env`; `alembic current` confirmed at Head (`ce969023baf9`); live DB verified: 11 tables present, `AsyncPostgresSaver` connects cleanly.
 - **Issue 04** — Graceful MemorySaver fallback implemented; connection timeout reduced; server starts cleanly even with bad DB creds
+- **Issue 05** ✅ — Duplicate `GET /api/v1/history` calls fixed via `DashboardDataContext` provider mounted once at `AppShell`. Single fetch per page load.
+- **Data Contract Alignment** ✅ — Extended backend `ApplicationRecordResponse` to include `job_title`, `company`, `submission_status`, `approval_status`, and `resume_url`. Added `update_display_fields` in `ApplicationRepository` & `_run_graph` to persist extracted metadata.
 
-### Frontend — All Pages Implemented ✅
+### Frontend — All Pages Implemented & Clean Build ✅
 - **`Dashboard.tsx`** — Stats cards + quick-action panel; live data from `useDashboardData`
 - **`ReviewQueuePage.tsx`** — Live queue fetched from `GET /api/v1/history`; links to ReviewDetail
 - **`ReviewDetail.tsx`** — Full human review UI; approve/reject with feedback; `POST /runs/{id}/approve`
@@ -114,16 +105,14 @@ Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smo
 - **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
 - **`AutomationLogsPage.tsx`** ✅ — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot; replay animation; per-level filter
 - **`ATSPlatformsPage.tsx`** ✅ — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅, LinkedIn/Indeed 📋 — 5/5 automation completed
-- **`HistoryPage.tsx`** ✅ — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav; replaces Stubs.tsx redirect
+- **`HistoryPage.tsx`** ✅ — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav
 - **Sidebar** — Review Queue badge live from `useDashboardData`; footer user name/email from `recon_profile` localStorage
-- **`Stubs.tsx`** — Fully superseded; no routes point to it
 
 ---
 
 ## In Progress
 
-- **Phase 18** — Auth & Settings sync to Supabase (no longer blocked by Issue 03).
-- **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart.
+- Ready for full end-to-end run verification (Upload PDF → graph execution → human review → apply/skip).
 
 ---
 
@@ -131,19 +120,10 @@ Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smo
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | — |
-| 2 | **Log durability** — Persist `AutomationLogger` entries to DB so logs survive server restart | — |
-| 3 | **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB persistence | — |
-| 4 | **LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific automation | Sprint 5 |
-| 5 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
-
----
-
-## Open Questions
-
-- **Supabase DB password**: ✅ Resolved — user reset in Supabase dashboard; `.env` updated; live connection verified (10 tables, `AsyncPostgresSaver` OK).
-- **AutomationLogs storage**: Chosen **process-local in-memory buffer** (simpler, zero deps). Logs survive within a single server process but are lost on restart. DB persistence deferred to Phase 18.
-- ~~History page scope~~ **Resolved**: Implemented as expandable per-run state-transition timeline (distinct from ApplicationsPage table).
+| 1 | **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB & log persistence | — |
+| 2 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | — |
+| 3 | **LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific automation | Sprint 5 |
+| 4 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
 
 ---
 
@@ -155,10 +135,11 @@ Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smo
 - Two-stage match scoring: embeddings floor check → LLM detailed, 70/30 blended score.
 - API schema ≠ graph state models — deliberate separation for independent evolution.
 - LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2 extraction / 0.7 creative).
-- **Database: Supabase PostgreSQL** — managed, hosted Postgres. SQLAlchemy async talks to it via direct connection string. No local Postgres required.
-- **Storage: Supabase Storage** — resume.pdf, tailored_resume.pdf, cover_letter.pdf stored in buckets. DB models store URLs, not blobs.
+- **Database: Supabase PostgreSQL** — managed, hosted Postgres. SQLAlchemy async talks to it via direct connection string.
+- **Storage: Supabase Storage** — resume.pdf, tailored_resume.pdf, cover_letter.pdf stored in buckets.
 - **LangGraph checkpointer: AsyncPostgresSaver** — pointed at Supabase Postgres. Interrupted workflows survive server restarts.
-- **Graph nodes never access Supabase directly** — all DB/storage access goes through repositories and services.
+- **Automation Logs: In-memory SSE buffer + PostgreSQL persistence (`automation_logs` table)**. Logs stream live in real time and persist across server restarts.
+- **Shared frontend data: `DashboardDataContext`** — single `GET /history` fetch per mount, shared across Sidebar, Dashboard, HistoryPage, etc. via React context.
 
 ---
 
@@ -175,36 +156,4 @@ Session 5b — Issue 03 resolved: Supabase DB live, migration verified, repo smo
   - `62a03ee` — feat: phases 11-14 — all remaining frontend pages + dynamic sidebar
   - `a6980c4` — docs: update progress tracker — issue 03, phases 13-14, git branch correction
   - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled
-  - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor ← HEAD
-- `dev` — stale branch (ahead of initial scaffold; superseded by main)
-
----
-
-## Session Notes
-
-**Session 1:** Entire backend graph + API layer implemented.
-Server smoke-tested live: uvicorn started, `/resume/parse` hit with real PDF → 200 OK, 5,418 chars extracted.
-Issue 01 resolved: fixed missing `duckduckgo-search` dep; NVIDIA_MODEL env var.
-Issue 02 resolved: Supabase integration complete — async SQLAlchemy, Supabase Storage, AsyncPostgresSaver wired.
-Issue 03 active: DB password placeholder (`SecretPass123!`) causing PgBouncer circuit breaker. Graceful MemorySaver fallback in place.
-
-**Session 2:** Full frontend implemented: Dashboard, ReviewQueue, ReviewDetail, JobSearch, Resumes, Profile.
-
-**Session 3:** All remaining stub pages — Applications, Activity, Keywords, Settings, Integrations, SavedJobs, AutomationLogs, ATSPlatforms. Zero TypeScript errors. Sidebar wired — review badge live from API, footer from localStorage profile.
-
-**Session 5:** Phase 17 complete — 5/5 ATS platforms now fully automated. Implemented:
-- `app/automation/workday.py` — multi-step wizard + `data-automation-id` selectors + confirmation detection
-- `app/automation/ashby.py` — Apply button + label-proximity cover letter + confirmation
-- `app/automation/smartrecruiters.py` — Apply Now + styled-button upload fallback + URL/element confirmation
-- `app/graph/agents/apply_agent.py` — refactored: delegates to `dispatcher.dispatch()`, threads `thread_id` for SSE
-- `ATSPlatformsPage.tsx` — Workday/Ashby/SmartRecruiters promoted to implemented (green cards)
-- Zero TS errors · uv import check passed · git commit `ece0233` · pushed main + dev
-
-**Session 5b:** Issue 03 resolved — Supabase DB fully operational:
-- User reset DB password in Supabase dashboard
-- `.env` `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` already updated with new credentials
-- `alembic current` → `ecca31836228 (head)` ✅
-- Live DB: 10 tables present (`applications`, `companies`, `jobs`, `resumes`, `reviews`, `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations`, `alembic_version`)
-- `ApplicationRepository.list_all()` returned 2 existing records ✅
-- `AsyncPostgresSaver.from_conn_string()` connected cleanly ✅
-- MemorySaver fallback no longer needed; full Postgres persistence active
+  - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor

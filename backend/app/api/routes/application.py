@@ -117,11 +117,11 @@ async def start_run(request: Request, body: RunRequest, background_tasks: Backgr
         _run_graph,
         thread_id=thread_id,
         resume_text=body.resume_text,
-        job_url=body.job_url,
+        job_url=body.effective_job_url,
         graph=graph,
     )
 
-    logger.info("start_run: launched thread_id=%s for job_url=%s", thread_id, body.job_url)
+    logger.info("start_run: launched thread_id=%s for job_url=%s", thread_id, body.effective_job_url)
 
     return RunStarted(thread_id=thread_id)
 
@@ -154,8 +154,25 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
         submission_status = final_state.get("submission_status")
         error = final_state.get("error")
 
+        # Extract display metadata from graph state for history endpoint
+        job_profile = final_state.get("job_profile")
+        company_profile = final_state.get("company_profile")
+        match_result = final_state.get("match_result")
+
+        job_title: str | None = getattr(job_profile, "job_title", None) if job_profile else None
+        company_name: str | None = getattr(company_profile, "name", None) if company_profile else None
+        match_score: float | None = getattr(match_result, "overall_score", None) if match_result else None
+
         async with get_async_session() as session:
             repo = ApplicationRepository(session)
+            # Persist display fields (job title, company, match score)
+            if any(v is not None for v in (job_title, company_name, match_score)):
+                await repo.update_display_fields(
+                    thread_id,
+                    job_title=job_title,
+                    company_name=company_name,
+                    match_score=match_score,
+                )
             if submission_status:
                 # submission_status is "applied", "skipped", or "failed"
                 await repo.update_status(
@@ -168,9 +185,11 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
                 await repo.update_status(thread_id, status="pending_review")
 
         logger.info(
-            "_run_graph: thread=%s finished | submission=%s",
+            "_run_graph: thread=%s finished | submission=%s | job=%s | company=%s",
             thread_id,
             submission_status,
+            job_title,
+            company_name,
         )
 
     except Exception as e:

@@ -11,7 +11,7 @@ Why separate schemas from state.py models?
   Keeping them separate means either side can evolve independently.
 """
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 from typing import Optional
 from datetime import datetime
 
@@ -24,6 +24,8 @@ class RunRequest(BaseModel):
 
     The client provides the two required inputs; the graph does the rest.
     resume_text can come from a prior parse or be sent directly.
+    Provide either job_url (a live job listing URL) or job_description (raw JD
+    text). Exactly one must be non-empty.
     """
     resume_text: str = Field(
         ...,
@@ -34,12 +36,25 @@ class RunRequest(BaseModel):
         None,
         description="Public URL to the uploaded resume file in Supabase Storage",
     )
-    job_url: str = Field(
-        ...,
-        description="Job listing URL (e.g. https://boards.greenhouse.io/acme/jobs/123) "
-                    "or raw job description text",
-        min_length=10,
+    job_url: Optional[str] = Field(
+        None,
+        description="Job listing URL (e.g. https://boards.greenhouse.io/acme/jobs/123)",
     )
+    job_description: Optional[str] = Field(
+        None,
+        description="Raw job description text (use when a URL is unavailable)",
+    )
+
+    @model_validator(mode="after")
+    def require_job_input(self) -> "RunRequest":
+        if not self.job_url and not self.job_description:
+            raise ValueError("Provide either job_url or job_description.")
+        return self
+
+    @property
+    def effective_job_url(self) -> str:
+        """Returns whichever job input was provided, for use as graph state job_url."""
+        return (self.job_url or self.job_description or "").strip()
 
 
 class ApproveRequest(BaseModel):

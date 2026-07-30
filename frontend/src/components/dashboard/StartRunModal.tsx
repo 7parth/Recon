@@ -33,17 +33,19 @@ export function StartRunModal({ onClose, onRunStarted }: StartRunModalProps) {
     try {
       // 1. Upload and parse resume
       const parseRes = await api.parseResume(file);
-      const resumeUrl = parseRes.resume_url; // Assuming backend returns this
+      const resumeText: string = parseRes.resume_text;
+      const resumeStorageUrl: string | undefined = parseRes.resume_storage_url;
 
-      if (!resumeUrl) {
-        throw new Error('Failed to get resume URL from parser.');
+      if (!resumeText) {
+        throw new Error('Failed to get resume text from parser.');
       }
 
       // 2. Start run
       const runRes: any = await api.startRun({
         job_url: jobUrl || undefined,
         job_description: jobDesc || undefined,
-        resume_url: resumeUrl,
+        resume_text: resumeText,
+        resume_storage_url: resumeStorageUrl,
       });
 
       onRunStarted(runRes.thread_id);

@@ -8,8 +8,8 @@ Usage:
     log.info("BrowserSession started", context="browser.py")
     log.success("Form submitted", context="greenhouse.py")
 
-Each call emits a LogEntry dict and optionally persists it to the DB.
-The SSE logs endpoint streams these entries to the frontend in real-time.
+Each call emits a LogEntry dict, broadcasts to active SSE listeners,
+stores in an in-memory buffer, and asynchronously persists to PostgreSQL.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Callable, Literal, Optional
+from typing import Literal, Optional
 
 LogLevel = Literal["INFO", "DEBUG", "WARN", "ERROR", "SUCCESS"]
 
@@ -61,16 +61,31 @@ class LogEntry:
 
 
 # ── In-memory log buffer ──────────────────────────────────────────────────────
-# Maps thread_id → list of LogEntry dicts.
-# Survives within a single server process; cleared on restart.
-# For durability across restarts, persist to DB (Phase 15 enhancement).
-
 _LOG_BUFFER: dict[str, list[dict]] = {}
 _LOG_LISTENERS: dict[str, list[asyncio.Queue]] = {}  # SSE subscriber queues
 
 
+async def _persist_log_to_db(entry: LogEntry) -> None:
+    """Async background task to save a log entry to Supabase Postgres."""
+    try:
+        from app.db.database import get_async_session
+        from app.db.repositories.log_repo import AutomationLogRepository
+
+        async with get_async_session() as session:
+            repo = AutomationLogRepository(session)
+            await repo.create(
+                thread_id=entry.thread_id,
+                level=entry.level,
+                message=entry.message,
+                context=entry.context,
+                ts=entry.ts,
+            )
+    except Exception as e:
+        logging.getLogger(__name__).debug("Failed to persist log to DB: %s", e)
+
+
 def _store(entry: LogEntry) -> None:
-    """Append entry to the in-memory buffer and broadcast to SSE listeners."""
+    """Append entry to the in-memory buffer, broadcast to SSE listeners, and save to DB."""
     buf = _LOG_BUFFER.setdefault(entry.thread_id, [])
     buf.append(entry.to_dict())
 
@@ -81,10 +96,54 @@ def _store(entry: LogEntry) -> None:
         except asyncio.QueueFull:
             pass  # drop if consumer is too slow
 
+    # Asynchronously persist to DB if event loop is running
+    try:
+        loop = asyncio.get_running_loop()
+        if loop.is_running():
+            loop.create_task(_persist_log_to_db(entry))
+    except RuntimeError:
+        pass  # No running event loop (e.g. CLI or sync test)
+
 
 def get_logs(thread_id: str) -> list[dict]:
-    """Return all buffered log entries for a thread (newest-to-oldest order preserved)."""
+    """Return all buffered log entries for a thread (synchronous memory lookup)."""
     return _LOG_BUFFER.get(thread_id, [])
+
+
+async def get_logs_async(thread_id: str) -> list[dict]:
+    """Return all log entries for a thread.
+
+    If present in memory buffer, returns memory buffer.
+    Otherwise, loads historical logs from Postgres DB into memory buffer.
+    """
+    if thread_id in _LOG_BUFFER and len(_LOG_BUFFER[thread_id]) > 0:
+        return _LOG_BUFFER[thread_id]
+
+    # Cold load from DB
+    try:
+        from app.db.database import get_async_session
+        from app.db.repositories.log_repo import AutomationLogRepository
+
+        async with get_async_session() as session:
+            repo = AutomationLogRepository(session)
+            records = await repo.get_by_thread_id(thread_id)
+            entries = [
+                {
+                    "id": str(r.id),
+                    "thread_id": r.thread_id,
+                    "ts": r.ts or r.created_at.strftime("%H:%M:%S.000"),
+                    "level": r.level,
+                    "message": r.message,
+                    "context": r.context,
+                }
+                for r in records
+            ]
+            if entries:
+                _LOG_BUFFER[thread_id] = entries
+            return entries
+    except Exception as e:
+        logging.getLogger(__name__).warning("Failed to fetch logs from DB: %s", e)
+        return _LOG_BUFFER.get(thread_id, [])
 
 
 def subscribe(thread_id: str) -> asyncio.Queue:
@@ -108,10 +167,9 @@ def unsubscribe(thread_id: str, q: asyncio.Queue) -> None:
 class AutomationLogger:
     """
     Thin wrapper that emits structured log entries to:
-      1. The standard Python ``logging`` module (so uvicorn stdout picks it up).
-      2. The in-memory buffer (so SSE can replay / stream them).
-
-    Instantiate once per run via ``get_automation_logger(thread_id)``.
+      1. Standard Python ``logging`` module.
+      2. In-memory buffer + SSE.
+      3. Supabase Postgres database.
     """
 
     _PY_LEVEL = {
@@ -119,7 +177,7 @@ class AutomationLogger:
         "DEBUG": logging.DEBUG,
         "WARN": logging.WARNING,
         "ERROR": logging.ERROR,
-        "SUCCESS": logging.INFO,  # Python logging has no SUCCESS level
+        "SUCCESS": logging.INFO,
     }
 
     def __init__(self, thread_id: str) -> None:
