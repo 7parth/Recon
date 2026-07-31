@@ -8,7 +8,7 @@
  * Data source: GET /api/v1/history (list) + GET /api/v1/history/{thread_id} (detail).
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
 import type { ApplicationRecord } from '../lib/types';

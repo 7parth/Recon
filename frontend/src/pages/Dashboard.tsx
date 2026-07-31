@@ -57,7 +57,7 @@ export function Dashboard() {
   const threadId = searchParams.get('run');
   const navigate = useNavigate();
 
-  const { history, stats, loading } = useDashboardData();
+  const { history, stats } = useDashboardData();
   const { runStatus } = usePipelineRun(threadId);
 
   const STATS_DATA = [

@@ -68,7 +68,10 @@ def route_after_match(state: ApplicationState) -> str:
         return END
 
     match = state.get("match_result")
-    if match is None or match.overall_score < MATCH_SCORE_THRESHOLD:
+    raw_threshold = state.get("match_score_threshold")
+    threshold = (raw_threshold / 100.0) if (isinstance(raw_threshold, (int, float)) and raw_threshold > 1.0) else (raw_threshold if raw_threshold is not None else MATCH_SCORE_THRESHOLD)
+
+    if match is None or match.overall_score < threshold:
         return END  # auto-skip: too weak a fit
 
     return ATS_AGENT

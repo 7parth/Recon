@@ -73,7 +73,6 @@ function ExternalIcon() {
 function KeyCard({ item }: { item: ApiKey }) {
   const [visible, setVisible] = useState(false);
   const [copied, setCopied] = useState(false);
-  const val = `\${${item.envVar}}`;
 
   function copyEnvVar() {
     navigator.clipboard.writeText(item.envVar);

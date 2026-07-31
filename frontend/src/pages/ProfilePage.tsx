@@ -71,12 +71,25 @@ export function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from API / localStorage on mount
   useEffect(() => {
+    let localData = EMPTY;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setProfile({ ...EMPTY, ...JSON.parse(raw) });
+      if (raw) localData = { ...EMPTY, ...JSON.parse(raw) };
+      setProfile(localData);
     } catch {}
+
+    fetch('/api/v1/user/profile')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          const merged = { ...EMPTY, ...data };
+          setProfile(merged);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function update(key: keyof ProfileData) {
@@ -87,9 +100,18 @@ export function ProfilePage() {
     };
   }
 
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    
+    try {
+      await fetch('/api/v1/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+    } catch {}
+
     setSaved(true);
     setDirty(false);
     setTimeout(() => setSaved(false), 2500);

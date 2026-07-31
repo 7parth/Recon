@@ -88,3 +88,8 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+
+async def dispose_engine() -> None:
+    """Close all pooled engine connections."""
+    await engine.dispose()

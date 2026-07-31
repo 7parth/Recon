@@ -53,7 +53,7 @@ export function ApplicationsTable({ applications }: ApplicationsTableProps) {
               <span className={styles.monoScore}>{app.matchScore}%</span>
             </div>
             <div className={`${styles.colStatus} ${styles.cell}`}>
-              <Badge variant={statusToBadge(app.status)} />
+              <Badge variant={statusToBadge(app.status)}>{app.status}</Badge>
             </div>
             <div className={`${styles.colDate} ${styles.cell}`}>
               <span className={styles.monoDate}>{app.appliedOn}</span>

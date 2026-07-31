@@ -50,10 +50,23 @@ export function SettingsPage() {
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
+    let localData = DEFAULTS;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSettings({ ...DEFAULTS, ...JSON.parse(raw) });
+      if (raw) localData = { ...DEFAULTS, ...JSON.parse(raw) };
+      setSettings(localData);
     } catch {}
+
+    fetch('/api/v1/user/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          const merged = { ...DEFAULTS, ...data };
+          setSettings(merged);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function update<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
@@ -62,17 +75,34 @@ export function SettingsPage() {
     setSaved(false);
   }
 
-  function handleSave() {
+  async function handleSave() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+
+    try {
+      await fetch('/api/v1/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+    } catch {}
+
     setSaved(true);
     setDirty(false);
     setTimeout(() => setSaved(false), 2500);
   }
 
-  function handleReset() {
+  async function handleReset() {
     setSettings(DEFAULTS);
     setDirty(true);
     setSaved(false);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULTS));
+    try {
+      await fetch('/api/v1/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(DEFAULTS),
+      });
+    } catch {}
   }
 
   const scoreColor = settings.match_threshold >= 80

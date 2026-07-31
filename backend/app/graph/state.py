@@ -53,6 +53,7 @@ class CoverLetter(BaseModel):
 class ApplicationState(TypedDict):
     resume_raw: str                # raw text of uploaded resume
     job_url: str                   # input URL or raw JD text
+    match_score_threshold: Optional[float]  # minimum match threshold (0.0 - 1.0 or 0 - 100)
     resume_profile: Optional[CandidateProfile]
     job_profile: Optional[JobProfile]
     company_profile: Optional[CompanyProfile]

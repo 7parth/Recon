@@ -1,4 +1,4 @@
-/* ── Typed fetch wrappers for FastAPI ── */
+import type { RunStatus } from './types';
 
 const BASE = '/api/v1';
 
@@ -20,7 +20,7 @@ export const api = {
     request('/runs/start', { method: 'POST', body: JSON.stringify(body) }),
 
   getRunStatus: (threadId: string) =>
-    request(`/runs/${threadId}/status`),
+    request<RunStatus>(`/runs/${threadId}/status`),
 
   getReviewPayload: (threadId: string) =>
     request(`/runs/${threadId}/review`),
