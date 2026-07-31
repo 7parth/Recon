@@ -2,12 +2,12 @@
 
 ## Current Phase
 
-Session 6 — Data contract alignment & Log durability completed; ready for End-to-End Run Smoke Test
+Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) completed ✅
 
 ## Current Goal
 
-1. **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB & log persistence
-2. **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage
+1. **Phase 19: LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific Playwright automation
+2. **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue (post-MVP)
 
 ---
 
@@ -21,8 +21,8 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
 
 ### Graph Core
 - **`app/graph/constants.py`** — node name constants, routing literals, `MATCH_SCORE_THRESHOLD`
-- **`app/graph/state.py`** — `ApplicationState` TypedDict + 7 Pydantic models; `CompanyProfile` added
-- **`app/graph/router.py`** — `route_after_planner` (fan-out), `route_after_match`, `route_after_review`, `route_after_apply`
+- **`app/graph/state.py`** — `ApplicationState` TypedDict + 7 Pydantic models; `CompanyProfile` added; `match_score_threshold` added
+- **`app/graph/router.py`** — `route_after_planner` (fan-out), `route_after_match` (respects `match_score_threshold`), `route_after_review`, `route_after_apply`
 - **`app/graph/builder.py`** — full `StateGraph`: 11 nodes, parallel fan-out, `interrupt_before=[HUMAN_REVIEW]`, re-tailor loop, `graph` singleton
 
 ### Tool Layer
@@ -55,7 +55,7 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
 - **`app/automation/dispatcher.py`** ✅ — URL-pattern platform detection + dispatch to correct module + AutomationLogger integration
 - **`app/graph/agents/apply_agent.py`** ✅ — Refactored: uses `dispatcher.dispatch()`, threads `thread_id` for SSE logging, removed duplicate detection logic
 
-### FastAPI Layer ✅ Smoke-tested
+### FastAPI Layer & End-to-End Pipeline Tests ✅
 - **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
 - **`app/api/routes/health.py`** — `GET /health`
 - **`app/api/routes/application.py`** — `POST /resume/parse`, `POST /runs/start` (BackgroundTasks + `thread_id`), `GET /runs/{id}/status`
@@ -63,56 +63,49 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
 - **`app/api/routes/jobs.py`** — `GET /jobs/search` (DDG proxy)
 - **`app/api/routes/history.py`** — `GET /history`, `GET /history/{thread_id}`
 - **`app/api/routes/logs.py`** ✅ — `GET /runs/{id}/logs` (snapshot), `GET /runs/{id}/logs/stream` (SSE)
-- **`app/main.py`** — lifespan factory, CORS, `/api/v1` prefix, startup/shutdown hooks, graceful MemorySaver fallback
-- **Smoke test passed** — `uvicorn` started cleanly; `POST /api/v1/resume/parse` returned `200 OK` with 5,418 chars extracted from a real PDF
+- **`app/tests/test_e2e_pipeline.py`** ✅ — Full end-to-end pipeline test suite verifying graph execution, pause at human review interrupt, approval resumption, state transitions, and tracking. Passed 100%.
 
-### Database & Storage Layer ✅
+### Database & User Persistence Layer (Phase 18) ✅
 - **`app/config.py`** — Supabase env vars
-- **`app/db/database.py`** — async SQLAlchemy engine via Supabase PostgreSQL connection string
+- **`app/db/database.py`** — async SQLAlchemy engine via Supabase PostgreSQL connection string + `dispose_engine` helper
 - **`app/db/supabase.py`** — Supabase async client singleton
-- **`app/db/models/`** — ORM models (`ApplicationRecord`, `Company`, `Job`, `Resume`, `Review`, `AutomationLogRecord`) with storage URL fields
-- **`app/db/repositories/`** — async repository pattern (`ApplicationRepository`, `AutomationLogRepository`)
+- **`app/db/models/`** — ORM models (`ApplicationRecord`, `CompanyRecord`, `JobRecord`, `ResumeRecord`, `ReviewRecord`, `AutomationLogRecord`, `UserProfileRecord`, `UserSettingsRecord`)
+- **`app/db/repositories/`** — async repository pattern (`ApplicationRepository`, `AutomationLogRepository`, `UserRepository`)
+- **`app/api/schemas/user.py`** — Pydantic schemas for `UserProfileResponse`, `UserProfileUpdate`, `UserSettingsResponse`, `UserSettingsUpdate`
+- **`app/api/routes/user.py`** — FastAPI endpoints `GET/PUT /api/v1/user/profile` and `GET/PUT /api/v1/user/settings`
+- **`app/tests/test_user_api.py`** ✅ — Async test suite for profile and settings endpoints. Passed 100%.
 - **`app/storage/`** — `storage.py`, `resume_storage.py`, `document_storage.py`
 - **`app/services/storage_service.py`** — upload documents, return public URLs
 - **`app/services/checkpoint_service.py`** — AsyncPostgresSaver wired to Supabase Postgres
-- **`backend/.env.example`** — Supabase env vars added
-- **Alembic migrations** — initial schema (`ecca31836228`), added `job_title` & `company_name` (`8804cb3c4a4d`), added `automation_logs` (`ce969023baf9`)
+- **Alembic migrations** — initial schema (`ecca31836228`), added `job_title` & `company_name` (`8804cb3c4a4d`), added `automation_logs` (`ce969023baf9`), added `user_profiles` & `user_settings` (`f92a101b4567`)
 
 ### Utility Layer ✅
 - **`app/utils/logger.py`** ✅ — `AutomationLogger` with in-memory buffer + SSE broadcast + asynchronous Supabase PostgreSQL log persistence + cold-load DB fallback
 - **`app/automation/dispatcher.py`** ✅ — URL-pattern ATS detection (`detect_platform`) + `dispatch()` with AutomationLogger
 
-### Issues Resolved
-- **Issue 01** — Missing `duckduckgo-search` dep; moved hardcoded LLM model to `NVIDIA_MODEL` env var
-- **Issue 02** — Supabase integration complete — async SQLAlchemy, Supabase Storage, AsyncPostgresSaver all wired
-- **Issue 03** ✅ — Supabase DB password reset by user; `DATABASE_URL` + `CHECKPOINT_DATABASE_URL` updated in `.env`; `alembic current` confirmed at Head (`ce969023baf9`); live DB verified: 11 tables present, `AsyncPostgresSaver` connects cleanly.
-- **Issue 04** — Graceful MemorySaver fallback implemented; connection timeout reduced; server starts cleanly even with bad DB creds
-- **Issue 05** ✅ — Duplicate `GET /api/v1/history` calls fixed via `DashboardDataContext` provider mounted once at `AppShell`. Single fetch per page load.
-- **Data Contract Alignment** ✅ — Extended backend `ApplicationRecordResponse` to include `job_title`, `company`, `submission_status`, `approval_status`, and `resume_url`. Added `update_display_fields` in `ApplicationRepository` & `_run_graph` to persist extracted metadata.
-
-### Frontend — All Pages Implemented & Clean Build ✅
+### Frontend — Profile & Settings Backend Sync & Clean Build ✅
+- **`ProfilePage.tsx`** ✅ — Candidate identity form (name, email, phone, LinkedIn, portfolio); synced with `GET/PUT /api/v1/user/profile` + `localStorage` fallback
+- **`SettingsPage.tsx`** ✅ — Preferences form (match threshold slider, auto-apply toggle, NVIDIA model, embedding model); synced with `GET/PUT /api/v1/user/settings` + `localStorage` fallback
 - **`Dashboard.tsx`** — Stats cards + quick-action panel; live data from `useDashboardData`
 - **`ReviewQueuePage.tsx`** — Live queue fetched from `GET /api/v1/history`; links to ReviewDetail
 - **`ReviewDetail.tsx`** — Full human review UI; approve/reject with feedback; `POST /runs/{id}/approve`
 - **`JobSearchPage.tsx`** — Search live listings via DDG `GET /jobs/search`; Copy URL flow
 - **`ResumesPage.tsx`** — Card grid of all app runs with original + tailored resume download links
-- **`ProfilePage.tsx`** — Candidate identity form (name, email, phone, LinkedIn, portfolio); localStorage
 - **`ApplicationsPage.tsx`** — Full table: search, status filter, sort by date/score, inline Review link, document download
 - **`ActivityPage.tsx`** — Chronological event timeline from `useDashboardData`; animated status nodes
 - **`KeywordsPage.tsx`** — Skills & keyword tag cloud; add/remove/save with localStorage
-- **`SettingsPage.tsx`** — Match threshold slider, auto-apply toggle, NVIDIA model dropdown, embedding model input; localStorage
 - **`IntegrationsPage.tsx`** — API key reference cards (NVIDIA + Supabase); `.env.example` code block; copy-env-var buttons
 - **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
-- **`AutomationLogsPage.tsx`** ✅ — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot; replay animation; per-level filter
-- **`ATSPlatformsPage.tsx`** ✅ — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅, LinkedIn/Indeed 📋 — 5/5 automation completed
-- **`HistoryPage.tsx`** ✅ — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav
-- **Sidebar** — Review Queue badge live from `useDashboardData`; footer user name/email from `recon_profile` localStorage
+- **`AutomationLogsPage.tsx`** — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot
+- **`ATSPlatformsPage.tsx`** — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅ — 5/5 automation completed
+- **`HistoryPage.tsx`** — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav
+- **Production Build** ✅ — `npm run build` completed cleanly in 332ms with zero TypeScript compilation or bundle errors
 
 ---
 
 ## In Progress
 
-- Ready for full end-to-end run verification (Upload PDF → graph execution → human review → apply/skip).
+- Phase 18 completed. System is ready for Phase 19 (LinkedIn Easy Apply & OAuth integration).
 
 ---
 
@@ -120,10 +113,8 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **End-to-end smoke test** — Full pipeline run: upload resume → parse → match → tailor → review → apply with real DB & log persistence | — |
-| 2 | **Phase 18: Auth & Settings sync** — Persist settings/profile to Supabase user record instead of localStorage | — |
-| 3 | **LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific automation | Sprint 5 |
-| 4 | **Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
+| 1 | **Phase 19: LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific Playwright automation | Sprint 5 |
+| 2 | **Phase 20: Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
 
 ---
 
@@ -132,10 +123,11 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
 - Supervisor (Planner Agent) controls execution via fixed routing, not dynamic LLM dispatch.
 - Specialized agents own one responsibility each.
 - Human review remains mandatory before Apply Agent (`interrupt_before=[HUMAN_REVIEW]`).
-- Two-stage match scoring: embeddings floor check → LLM detailed, 70/30 blended score.
+- Two-stage match scoring: embeddings floor check → LLM detailed, 70/30 blended score. Respects `match_score_threshold` set in ApplicationState and UserSettings.
 - API schema ≠ graph state models — deliberate separation for independent evolution.
 - LLM: NVIDIA AI Endpoints (`meta/llama-4-scout-17b-16e-instruct`, temp=0.2 extraction / 0.7 creative).
 - **Database: Supabase PostgreSQL** — managed, hosted Postgres. SQLAlchemy async talks to it via direct connection string.
+- **User Profile & Preferences Persistence** — stored in `user_profiles` and `user_settings` tables in Supabase Postgres via `UserRepository`. Frontend components sync with API endpoints and fallback to `localStorage` when offline.
 - **Storage: Supabase Storage** — resume.pdf, tailored_resume.pdf, cover_letter.pdf stored in buckets.
 - **LangGraph checkpointer: AsyncPostgresSaver** — pointed at Supabase Postgres. Interrupted workflows survive server restarts.
 - **Automation Logs: In-memory SSE buffer + PostgreSQL persistence (`automation_logs` table)**. Logs stream live in real time and persist across server restarts.
@@ -158,5 +150,5 @@ Session 6 — Data contract alignment & Log durability completed; ready for End-
   - `29917e1` — feat: phases 15-16 — SSE automation logs, full history page, dispatcher + logger stubs filled
   - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor
   - `0e2cfa5` — feat: session 6 — context-backed dashboard data, history data contract alignment, log DB persistence
+  - `6fc5a87` — feat: phase 18 — user profile & settings DB sync + e2e pipeline smoke test
 - `dev` — target branch for release pushes
-
