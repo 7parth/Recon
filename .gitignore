@@ -34,3 +34,10 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# LinkedIn Easy Apply — stored Playwright session (contains auth cookies — treat as secret)
+.linkedin_session.json
+backend/.linkedin_session.json
+
+# Playwright debug screenshots
+*_error.png

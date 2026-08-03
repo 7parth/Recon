@@ -43,3 +43,8 @@ dependencies = [
     "tenacity>=8.3.0",
     "uvicorn[standard]>=0.30.0",
 ]
+
+[tool.pytest.ini_options]
+# Add backend/ to sys.path so `from app.xxx import ...` works in tests
+pythonpath = ["."]
+asyncio_mode = "auto"

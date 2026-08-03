@@ -77,6 +77,16 @@ class Settings(BaseSettings):
         description="Celery result backend URL (Redis)",
     )
 
+    # ── LinkedIn ──────────────────────────────────────────────────────────────
+    linkedin_session_path: str = Field(
+        ".linkedin_session.json",
+        description=(
+            "Path to the Playwright browser storage-state file used for LinkedIn Easy Apply. "
+            "Relative to the backend/ working directory, or absolute. "
+            "Bootstrap once with: python -m app.automation.linkedin_login"
+        ),
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

@@ -9,11 +9,12 @@ This module is called by apply_agent to:
 Platform detection is URL-pattern based — fast, no network call needed.
 
 Supported platforms:
-  ✅  Greenhouse  — boards.greenhouse.io
-  ✅  Lever       — jobs.lever.co
-  🟡  Workday     — *.wd1.myworkdayjobs.com / *.wd5.myworkdayjobs.com
-  🟡  Ashby       — jobs.ashbyhq.com
-  🟡  SmartRecruiters — jobs.smartrecruiters.com
+  ✅  Greenhouse      — boards.greenhouse.io
+  ✅  Lever           — jobs.lever.co
+  ✅  Workday         — *.wd1.myworkdayjobs.com / *.wd5.myworkdayjobs.com
+  ✅  Ashby           — jobs.ashbyhq.com
+  ✅  SmartRecruiters — jobs.smartrecruiters.com
+  ✅  LinkedIn        — linkedin.com/jobs (Easy Apply, requires stored session)
 
 Any URL that doesn't match a known pattern returns platform="unknown"
 and submit() returns False (skipped, not a hard failure).
@@ -30,7 +31,7 @@ from app.utils.logger import AutomationLogger, get_automation_logger
 
 logger = logging.getLogger(__name__)
 
-Platform = Literal["greenhouse", "lever", "workday", "ashby", "smartrecruiters", "unknown"]
+Platform = Literal["greenhouse", "lever", "workday", "ashby", "smartrecruiters", "linkedin", "unknown"]
 
 # ── URL pattern → platform ────────────────────────────────────────────────────
 
@@ -40,6 +41,8 @@ _PATTERNS: list[tuple[re.Pattern, Platform]] = [
     (re.compile(r"myworkdayjobs\.com", re.I),             "workday"),
     (re.compile(r"jobs\.ashbyhq\.com", re.I),             "ashby"),
     (re.compile(r"jobs\.smartrecruiters\.com", re.I),     "smartrecruiters"),
+    # LinkedIn Easy Apply — must come AFTER other linkedin.com subdomains if any were added
+    (re.compile(r"linkedin\.com/jobs", re.I),             "linkedin"),
 ]
 
 
@@ -109,6 +112,8 @@ def dispatch(
             from app.automation.ashby import submit
         elif platform == "smartrecruiters":
             from app.automation.smartrecruiters import submit
+        elif platform == "linkedin":
+            from app.automation.linkedin import submit
         else:
             # Unreachable given the pattern list, but satisfies type checker.
             log.error(f"Unhandled platform: {platform}", context="dispatcher.py")

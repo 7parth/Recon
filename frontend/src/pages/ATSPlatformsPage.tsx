@@ -53,10 +53,10 @@ const PLATFORMS: Platform[] = [
   {
     id: 'linkedin-easy',
     name: 'LinkedIn Easy Apply',
-    status: 'planned',
-    description: 'Requires LinkedIn authentication. Planned for Sprint 5 with OAuth integration.',
-    fields: ['Requires: OAuth session, profile auto-fill'],
-    color: '#6B7280',
+    status: 'implemented',
+    description: 'Full Playwright automation — stored-session authentication (one-time manual login), Easy Apply modal navigation, phone fill, resume upload, cover letter, multi-step handling, "Application submitted" confirmation detection.',
+    fields: ['phone', 'resume (PDF upload)', 'cover_letter (textarea)', 'multi-step modal navigation'],
+    color: '#0A66C2',
   },
   {
     id: 'indeed',
