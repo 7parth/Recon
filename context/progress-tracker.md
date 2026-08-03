@@ -2,12 +2,11 @@
 
 ## Current Phase
 
-Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) completed ✅
+Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
 
 ## Current Goal
 
-1. **Phase 19: LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific Playwright automation
-2. **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue (post-MVP)
+1. **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue (post-MVP)
 
 ---
 
@@ -52,8 +51,17 @@ Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) co
 - **`app/automation/workday.py`** ✅ — `data-automation-id` selectors, multi-step wizard navigation, resume upload + fallback, cover letter, confirmation detection
 - **`app/automation/ashby.py`** ✅ — Apply button click, standard HTML5 form fill, label-proximity cover letter fallback, confirmation
 - **`app/automation/smartrecruiters.py`** ✅ — Apply Now click, personal info, styled-button upload fallback, cover letter, URL+element confirmation
-- **`app/automation/dispatcher.py`** ✅ — URL-pattern platform detection + dispatch to correct module + AutomationLogger integration
+- **`app/automation/dispatcher.py`** ✅ — URL-pattern platform detection + dispatch to correct module + AutomationLogger integration; LinkedIn added (6 platforms total)
 - **`app/graph/agents/apply_agent.py`** ✅ — Refactored: uses `dispatcher.dispatch()`, threads `thread_id` for SSE logging, removed duplicate detection logic
+
+### LinkedIn Easy Apply (Phase 19) ✅
+- **`app/automation/linkedin_auth.py`** ✅ — `get_session_path()` (env var / default), `load_session()` (cookie injection), `save_session()` (storage_state persist), `is_session_valid()` (live feed-page check), `session_file_exists()`
+- **`app/automation/linkedin_login.py`** ✅ — One-time CLI interactive login; headed Playwright browser; polls for `/feed` redirect; auto-saves session; `python -m app.automation.linkedin_login`
+- **`app/automation/linkedin.py`** ✅ — Full Easy Apply automation: session load + validation → job navigate → Easy Apply modal click → multi-step handling (phone, resume upload, cover letter, Next/Review/Submit) → confirmation detection; best-effort, returns `False` gracefully on unhandled steps
+- **`app/api/routes/linkedin.py`** ✅ — `GET /api/v1/linkedin/auth/status` (live Playwright session validity check), `POST /api/v1/linkedin/auth/init` (starts headed login in background thread)
+- **`app/config.py`** ✅ — `linkedin_session_path` setting (env: `LINKEDIN_SESSION_PATH`)
+- **`.gitignore`** ✅ — `.linkedin_session.json` and `*_error.png` excluded from VCS
+- **`app/tests/test_linkedin_automation.py`** ✅ — 22 unit tests (URL detection, dispatcher routing, session path, auth helpers, config); **22/22 passed**
 
 ### FastAPI Layer & End-to-End Pipeline Tests ✅
 - **`app/api/schemas/application.py`** — `RunRequest`, `ApproveRequest`, `RunStarted`, `ReviewPayload`, `RunStatus`, `ResumeParseResponse`
@@ -94,18 +102,21 @@ Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) co
 - **`ApplicationsPage.tsx`** — Full table: search, status filter, sort by date/score, inline Review link, document download
 - **`ActivityPage.tsx`** — Chronological event timeline from `useDashboardData`; animated status nodes
 - **`KeywordsPage.tsx`** — Skills & keyword tag cloud; add/remove/save with localStorage
-- **`IntegrationsPage.tsx`** — API key reference cards (NVIDIA + Supabase); `.env.example` code block; copy-env-var buttons
+- **`IntegrationsPage.tsx`** ✅ — API key reference cards (NVIDIA + Supabase) + **LinkedIn Session card**: live `GET /api/v1/linkedin/auth/status` poll, "Connect LinkedIn" button → `POST /api/v1/linkedin/auth/init`, 5s polling while waiting, animated pulse dot, `.env.example` updated
 - **`SavedJobsPage.tsx`** — Bookmarked listings from localStorage; remove + copy-URL-for-run actions
 - **`AutomationLogsPage.tsx`** — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot
-- **`ATSPlatformsPage.tsx`** — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅ — 5/5 automation completed
+- **`ATSPlatformsPage.tsx`** ✅ — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅, **LinkedIn Easy Apply ✅** — **6/6 automation completed**
 - **`HistoryPage.tsx`** — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav
-- **Production Build** ✅ — `npm run build` completed cleanly in 332ms with zero TypeScript compilation or bundle errors
+- **Production Build** ✅ — `npm run build` completed cleanly in 155ms with zero TypeScript compilation or bundle errors
+
+### Test Infrastructure
+- **`pyproject.toml`** — Added `[tool.pytest.ini_options]` with `pythonpath = ["."]` and `asyncio_mode = "auto"`
 
 ---
 
 ## In Progress
 
-- Phase 18 completed. System is ready for Phase 19 (LinkedIn Easy Apply & OAuth integration).
+- Phase 19 completed. System is ready for Phase 20 (Vectorstore + Celery).
 
 ---
 
@@ -113,8 +124,7 @@ Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) co
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **Phase 19: LinkedIn Easy Apply** — OAuth integration + LinkedIn-specific Playwright automation | Sprint 5 |
-| 2 | **Phase 20: Vectorstore + Celery** — FAISS indexing, async task queue (post-MVP) | — |
+| 1 | **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue | — |
 
 ---
 
@@ -132,6 +142,7 @@ Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) co
 - **LangGraph checkpointer: AsyncPostgresSaver** — pointed at Supabase Postgres. Interrupted workflows survive server restarts.
 - **Automation Logs: In-memory SSE buffer + PostgreSQL persistence (`automation_logs` table)**. Logs stream live in real time and persist across server restarts.
 - **Shared frontend data: `DashboardDataContext`** — single `GET /history` fetch per mount, shared across Sidebar, Dashboard, HistoryPage, etc. via React context.
+- **LinkedIn Easy Apply: Stored Playwright session** — user logs in once via `python -m app.automation.linkedin_login` (headed browser); session persisted to `.linkedin_session.json` (git-ignored); reused for all subsequent headless automation runs. Session validity checked live before each run via `is_session_valid()`. Re-authentication available via IntegrationsPage UI or CLI.
 
 ---
 
@@ -151,4 +162,5 @@ Session 7 — End-to-End Smoke Test & Phase 18 (User Profile & Settings Sync) co
   - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor
   - `0e2cfa5` — feat: session 6 — context-backed dashboard data, history data contract alignment, log DB persistence
   - `6fc5a87` — feat: phase 18 — user profile & settings DB sync + e2e pipeline smoke test
+  - `11a2ecc` — feat: phase 19 — LinkedIn Easy Apply automation + auth API + frontend integration
 - `dev` — target branch for release pushes
