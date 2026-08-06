@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
+Session 9 — Phase 20 (pgvector + Celery) completed ✅
 
 ## Current Goal
 
-1. **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue (post-MVP)
+1. **Phase 21: Hardening & Deploy** — Error handling/retry for flaky Playwright submissions, Docker Compose full-stack test, AWS deploy (RDS + ElastiCache + ECS/Fargate)
 
 ---
 
@@ -107,16 +107,29 @@ Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
 - **`AutomationLogsPage.tsx`** — SSE live stream via `EventSource`; run selector dropdown; LIVE indicator + animated pulse dot
 - **`ATSPlatformsPage.tsx`** ✅ — Platform cards: Greenhouse ✅, Lever ✅, Workday ✅, Ashby ✅, SmartRecruiters ✅, **LinkedIn Easy Apply ✅** — **6/6 automation completed**
 - **`HistoryPage.tsx`** — Full dedicated page: expandable per-run state-transition timeline, document links, automation logs nav
-- **Production Build** ✅ — `npm run build` completed cleanly in 155ms with zero TypeScript compilation or bundle errors
+- **`Production Build`** ✅ — `npm run build` completed cleanly in 155ms with zero TypeScript compilation or bundle errors
 
 ### Test Infrastructure
 - **`pyproject.toml`** — Added `[tool.pytest.ini_options]` with `pythonpath = ["."]` and `asyncio_mode = "auto"`
+
+### pgvector Embedding Store + Celery Background Queue (Phase 20) ✅
+- **`app/db/models/embedding.py`** ✅ — `ResumeEmbeddingRecord` ORM model; `Vector(384)` column via pgvector.sqlalchemy
+- **`migrations/.../646c34ea53a5_add_resume_embeddings_pgvector.py`** ✅ — `CREATE EXTENSION IF NOT EXISTS vector`, `resume_embeddings` table, IVFFlat cosine index; applied to Supabase
+- **`app/vectorstore/pgvector.py`** ✅ — `upsert_embedding` (ON CONFLICT DO UPDATE), `search_embeddings` (cosine `<=>` operator, top-k ranked, score clipped [0,1])
+- **`app/vectorstore/indexing.py`** ✅ — `index_resume(thread_id, resume_text)`, `search_similar_resumes(query_text, top_k)` — text → embeddings → pgvector
+- **`app/vectorstore/__init__.py`** ✅ — Clean package exports
+- **`app/workers/celery_app.py`** ✅ — Celery factory: JSON serializers, `task_track_started=True`, `task_acks_late=True`, `worker_prefetch_multiplier=1`, queues: `pipeline` + `indexing`
+- **`app/workers/application_tasks.py`** ✅ — `run_application_pipeline` Celery task (queue: pipeline): runs graph via `asyncio.run()`, updates DB, chains `index_resume_task`
+- **`app/workers/indexing_tasks.py`** ✅ — `index_resume_task` Celery task (queue: indexing): auto-retry ×3 with exponential backoff
+- **`app/api/routes/application.py`** ✅ — `POST /runs/start?use_celery=true` opt-in Celery dispatch with Redis fallback; BackgroundTask path also chains pgvector indexing
+- **`app/tests/test_vectorstore.py`** ✅ — 12 unit tests; **12/12 passed**
+- **`app/tests/test_celery_tasks.py`** ✅ — 15 unit tests; **15/15 passed** — **Total Phase 20: 27/27 passed**
 
 ---
 
 ## In Progress
 
-- Phase 19 completed. System is ready for Phase 20 (Vectorstore + Celery).
+- Phase 20 completed. System is ready for Phase 21 (Hardening & Deploy).
 
 ---
 
@@ -124,7 +137,9 @@ Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **Phase 20: Vectorstore + Celery** — FAISS indexing, candidate embedding search, background task queue | — |
+| 1 | **Phase 21: Hardening** — Playwright retry policy, failed status path, structured error reporting | — |
+| 2 | **Phase 21: Docker Compose** — Full local stack (app + postgres + redis + celery worker) | Phase 21 hardening |
+| 3 | **Phase 21: AWS Deploy** — RDS, ElastiCache, ECS/Fargate, final acceptance checklist | Docker Compose |
 
 ---
 
@@ -142,6 +157,10 @@ Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
 - **LangGraph checkpointer: AsyncPostgresSaver** — pointed at Supabase Postgres. Interrupted workflows survive server restarts.
 - **Automation Logs: In-memory SSE buffer + PostgreSQL persistence (`automation_logs` table)**. Logs stream live in real time and persist across server restarts.
 - **Shared frontend data: `DashboardDataContext`** — single `GET /history` fetch per mount, shared across Sidebar, Dashboard, HistoryPage, etc. via React context.
+- **pgvector Embedding Store** — `resume_embeddings` table in Supabase Postgres; 384-dim vectors from all-MiniLM-L6-v2; cosine similarity via `<=>` operator; IVFFlat index for approximate fast search. Replaces planned local FAISS disk store.
+- **Celery Worker Queue** — `run_application_pipeline` task on `pipeline` queue; `index_resume_task` on `indexing` queue. Both queues run independently scalable workers. `task_acks_late=True` + `worker_prefetch_multiplier=1` for long-running graph tasks.
+- **Opt-in Celery** — `POST /runs/start?use_celery=true`. Default (BackgroundTask) path unchanged — no Redis required for development.
+- **Automatic resume indexing** — both the BackgroundTask path and the Celery task path chain `index_resume` after graph completion. Embeddings are updated on every re-run.
 - **LinkedIn Easy Apply: Stored Playwright session** — user logs in once via `python -m app.automation.linkedin_login` (headed browser); session persisted to `.linkedin_session.json` (git-ignored); reused for all subsequent headless automation runs. Session validity checked live before each run via `is_session_valid()`. Re-authentication available via IntegrationsPage UI or CLI.
 
 ---
@@ -162,5 +181,5 @@ Session 8 — Phase 19 (LinkedIn Easy Apply) completed ✅
   - `ece0233` — feat: phase 17 — Workday, Ashby, SmartRecruiters Playwright automation + apply_agent refactor
   - `0e2cfa5` — feat: session 6 — context-backed dashboard data, history data contract alignment, log DB persistence
   - `6fc5a87` — feat: phase 18 — user profile & settings DB sync + e2e pipeline smoke test
-  - `11a2ecc` — feat: phase 19 — LinkedIn Easy Apply automation + auth API + frontend integration
+  - `8c93298` — feat: phase 20 — pgvector embedding store + Celery background task queue
 - `dev` — target branch for release pushes
