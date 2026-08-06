@@ -11,6 +11,7 @@ from app.db.models.log import AutomationLogRecord  # noqa: F401
 from app.db.models.resume import ResumeRecord  # noqa: F401
 from app.db.models.review import ReviewRecord  # noqa: F401
 from app.db.models.user import UserProfileRecord, UserSettingsRecord  # noqa: F401
+from app.db.models.embedding import ResumeEmbeddingRecord  # noqa: F401
 
 __all__ = [
     "ApplicationRecord",
@@ -21,4 +22,5 @@ __all__ = [
     "ReviewRecord",
     "UserProfileRecord",
     "UserSettingsRecord",
+    "ResumeEmbeddingRecord",
 ]

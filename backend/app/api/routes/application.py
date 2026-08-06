@@ -27,7 +27,7 @@ Key concept — BackgroundTasks:
 import uuid
 import logging
 from pathlib import Path
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, HTTPException, Query, Request
 
 from app.api.schemas.application import (
     RunRequest,
@@ -93,35 +93,82 @@ async def parse_resume_file(file: UploadFile = File(...)):
 # ── Run start endpoint ────────────────────────────────────────────────────────
 
 @router.post("/runs/start", response_model=RunStarted, status_code=202)
-async def start_run(request: Request, body: RunRequest, background_tasks: BackgroundTasks):
+async def start_run(
+    request: Request,
+    body: RunRequest,
+    background_tasks: BackgroundTasks,
+    use_celery: bool = Query(
+        default=False,
+        description=(
+            "If true, dispatch the pipeline to a Celery worker (requires Redis). "
+            "If false (default), run as a FastAPI BackgroundTask."
+        ),
+    ),
+):
     """
     Launch a new application run for the given resume + job URL.
     Returns immediately with a thread_id (202 Accepted).
+
+    Query param:
+      use_celery=true — dispatch to Celery worker queue (needs Redis + worker running).
+      use_celery=false (default) — run as a FastAPI BackgroundTask (default, no Redis needed).
     """
     thread_id = str(uuid.uuid4())
 
     async with get_async_session() as session:
         repo = ApplicationRepository(session)
-        # We start with status="running" conceptually, but DB default is "pending_review".
-        # Let's set it to "running" manually. Wait, "running" is not in the DB comment, 
-        # but the column is just String(50). We can use "running".
         await repo.create(
             thread_id=thread_id,
             resume_storage_url=body.resume_storage_url,
         )
         await repo.update_status(thread_id, status="running")
 
-    # Add the graph execution as a background task.
-    graph = request.app.state.graph
-    background_tasks.add_task(
-        _run_graph,
-        thread_id=thread_id,
-        resume_text=body.resume_text,
-        job_url=body.effective_job_url,
-        graph=graph,
-    )
-
-    logger.info("start_run: launched thread_id=%s for job_url=%s", thread_id, body.effective_job_url)
+    if use_celery:
+        # ── Celery path: durable, survives server restarts ────────────────
+        try:
+            from app.workers.application_tasks import run_application_pipeline
+            run_application_pipeline.apply_async(
+                kwargs={
+                    "thread_id": thread_id,
+                    "resume_text": body.resume_text,
+                    "job_url": body.effective_job_url,
+                    "resume_storage_url": body.resume_storage_url,
+                },
+                queue="pipeline",
+            )
+            logger.info(
+                "start_run [celery]: queued thread_id=%s for job_url=%s",
+                thread_id,
+                body.effective_job_url,
+            )
+        except Exception as e:
+            # If Redis is unavailable, fall back to BackgroundTasks and warn.
+            logger.warning(
+                "start_run: Celery dispatch failed (%s) — falling back to BackgroundTask", e
+            )
+            graph = request.app.state.graph
+            background_tasks.add_task(
+                _run_graph,
+                thread_id=thread_id,
+                resume_text=body.resume_text,
+                job_url=body.effective_job_url,
+                graph=graph,
+            )
+    else:
+        # ── Default path: FastAPI BackgroundTask ──────────────────────────
+        graph = request.app.state.graph
+        background_tasks.add_task(
+            _run_graph,
+            thread_id=thread_id,
+            resume_text=body.resume_text,
+            job_url=body.effective_job_url,
+            graph=graph,
+        )
+        logger.info(
+            "start_run [background]: launched thread_id=%s for job_url=%s",
+            thread_id,
+            body.effective_job_url,
+        )
 
     return RunStarted(thread_id=thread_id)
 
@@ -192,6 +239,16 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
             company_name,
         )
 
+        # ── Index resume in pgvector for similarity search ────────────────
+        # Fire-and-forget async task. Errors here are non-fatal.
+        try:
+            from app.vectorstore.indexing import index_resume
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            loop.create_task(index_resume(thread_id=thread_id, resume_text=resume_text))
+        except Exception as idx_err:
+            logger.warning("_run_graph: pgvector indexing failed (non-fatal): %s", idx_err)
     except Exception as e:
         logger.error("_run_graph: thread=%s raised exception: %s", thread_id, e)
         async with get_async_session() as session:
