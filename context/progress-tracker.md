@@ -129,7 +129,7 @@ Session 9 — Phase 20 (pgvector + Celery) completed ✅
 
 ## In Progress
 
-- Phase 20 completed. System is ready for Phase 21 (Hardening & Deploy).
+- Phase 21 skipped. All planned phases complete. Pushing to GitHub.
 
 ---
 
@@ -137,9 +137,7 @@ Session 9 — Phase 20 (pgvector + Celery) completed ✅
 
 | # | Item | Depends On |
 |---|------|------------|
-| 1 | **Phase 21: Hardening** — Playwright retry policy, failed status path, structured error reporting | — |
-| 2 | **Phase 21: Docker Compose** — Full local stack (app + postgres + redis + celery worker) | Phase 21 hardening |
-| 3 | **Phase 21: AWS Deploy** — RDS, ElastiCache, ECS/Fargate, final acceptance checklist | Docker Compose |
+| — | Phase 21 (Hardening & Deploy) skipped by decision | — |
 
 ---
 
