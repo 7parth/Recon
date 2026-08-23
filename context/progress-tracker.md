@@ -2,11 +2,12 @@
 
 ## Current Phase
 
-Session 9 — Phase 20 (pgvector + Celery) completed ✅
+Session 10 — README + Dockerfile + docker-compose complete ✅  
+`main` and `dev` pushed to GitHub.
 
 ## Current Goal
 
-1. **Phase 21: Hardening & Deploy** — Error handling/retry for flaky Playwright submissions, Docker Compose full-stack test, AWS deploy (RDS + ElastiCache + ECS/Fargate)
+Project is complete and pushed. All phases done.
 
 ---
 
@@ -129,7 +130,7 @@ Session 9 — Phase 20 (pgvector + Celery) completed ✅
 
 ## In Progress
 
-- Phase 21 skipped. All planned phases complete. Pushing to GitHub.
+- All phases complete. README written, Dockerfile and docker-compose filled in, pushed to `dev`. ✅
 
 ---
 
@@ -180,4 +181,6 @@ Session 9 — Phase 20 (pgvector + Celery) completed ✅
   - `0e2cfa5` — feat: session 6 — context-backed dashboard data, history data contract alignment, log DB persistence
   - `6fc5a87` — feat: phase 18 — user profile & settings DB sync + e2e pipeline smoke test
   - `8c93298` — feat: phase 20 — pgvector embedding store + Celery background task queue
-- `dev` — target branch for release pushes
+  - `b64c588` — docs: skip phase 21 — pushing to GitHub
+  - `5627a33` — docs + infra: README, Dockerfile, docker-compose
+- `dev` — release branch, merged from main; now at `5627a33`
