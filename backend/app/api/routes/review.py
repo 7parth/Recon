@@ -73,6 +73,7 @@ async def get_review(thread_id: str, request: Request):
     match_result    = state.get("match_result")
     ats_report      = state.get("ats_report")
     company_profile = state.get("company_profile")
+    job_profile     = state.get("job_profile")
 
     if tailored_resume is None or cover_letter is None:
         raise HTTPException(
@@ -80,12 +81,16 @@ async def get_review(thread_id: str, request: Request):
             detail="Checkpoint is missing tailored_resume or cover_letter — graph may have failed.",
         )
 
+    ats_coverage = ats_report.keyword_match if ats_report else 0.0
+
     return ReviewPayload(
         thread_id=thread_id,
         company_name=company_profile.name if company_profile else None,
+        job_title=job_profile.job_title if job_profile else None,
         job_url=state.get("job_url", ""),
         match_score=match_result.overall_score if match_result else 0.0,
-        ats_keyword_coverage=ats_report.keyword_match if ats_report else 0.0,
+        ats_keyword_coverage=ats_coverage,
+        ats_score=round(ats_coverage * 100, 1),   # 0–100 % for display
         tailored_resume=tailored_resume.content,
         cover_letter=cover_letter.content,
         match_summary=MatchSummary(
@@ -95,6 +100,8 @@ async def get_review(thread_id: str, request: Request):
             gap_areas=match_result.gap_areas if match_result else [],
         ),
         ats_recommendations=ats_report.recommendations if ats_report else "",
+        matched_keywords=ats_report.matched_keywords if ats_report else [],
+        missing_keywords=ats_report.missing_keywords if ats_report else [],
     )
 
 

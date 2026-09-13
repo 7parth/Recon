@@ -30,7 +30,7 @@ class UserSettingsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     match_threshold: int = 70
-    nvidia_model: str = "meta/llama-4-scout-17b-16e-instruct"
+    nvidia_model: str = "meta/llama-4-maverick-17b-128e-instruct"   # matches config.py Settings default
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     auto_apply: bool = False
     enable_notifications: bool = True

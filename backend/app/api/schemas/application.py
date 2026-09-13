@@ -90,13 +90,17 @@ class ReviewPayload(BaseModel):
     """
     thread_id: str
     company_name: Optional[str] = None
+    job_title: Optional[str] = None       # from JobProfile.job_title
     job_url: str
     match_score: float
-    ats_keyword_coverage: float
-    tailored_resume: str         # full text for the user to read/edit
+    ats_score: float                      # alias for ats_keyword_coverage (0–100 %)
+    ats_keyword_coverage: float           # raw 0.0–1.0 value for programmatic use
+    ats_recommendations: str
+    tailored_resume: str                  # full text for the user to read/edit
     cover_letter: str
     match_summary: MatchSummary
-    ats_recommendations: str
+    matched_keywords: list[str] = []      # keywords present in the tailored resume
+    missing_keywords: list[str] = []      # keywords from JD absent from resume
 
 
 class RunStatus(BaseModel):
@@ -106,6 +110,11 @@ class RunStatus(BaseModel):
     submission_status: Optional[str] = None   # "applied" | "failed" | "skipped" | None
     error: Optional[str] = None
     completed_at: Optional[datetime] = None
+    # ── Display fields (populated from DB record once the pipeline runs) ──────
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    match_score: Optional[float] = None
+    started_at: Optional[datetime] = None    # created_at of the run record
 
 
 class ResumeParseResponse(BaseModel):

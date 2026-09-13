@@ -13,6 +13,8 @@ JOB_SYSTEM_PROMPT = """You are a job description analyst. Extract structured \
 requirements from the job description provided.
 
 Extract the following fields:
+- job_title: the job title exactly as stated in the posting (e.g. "Senior Software Engineer"). \
+  Use null if not explicitly stated.
 - required_skills: list of skills, technologies, or tools explicitly required or preferred. \
   Include both technical (e.g. "Python", "Kubernetes") and soft skills (e.g. "cross-functional collaboration").
 - responsibilities: a concise paragraph (3-5 sentences) summarising the core \

@@ -16,6 +16,7 @@ class CandidateProfile(BaseModel):
 
 
 class JobProfile(BaseModel):
+    job_title: Optional[str] = None      # extracted job title for DB persistence
     required_skills: list[str]
     responsibilities: str
     experience_required: float
@@ -39,6 +40,8 @@ class ATSReport(BaseModel):
     keyword_match: float
     section_score: dict[str, int]
     recommendations: str
+    matched_keywords: list[str] = []   # skills/keywords found in the resume
+    missing_keywords: list[str] = []   # skills/keywords absent from the resume
 
 
 class TailoredResume(BaseModel):
@@ -51,6 +54,7 @@ class CoverLetter(BaseModel):
 
 
 class ApplicationState(TypedDict):
+    thread_id: Optional[str]             # run ID — injected by the route, used by apply_agent for log tagging
     resume_raw: str                # raw text of uploaded resume
     job_url: str                   # input URL or raw JD text
     match_score_threshold: Optional[float]  # minimum match threshold (0.0 - 1.0 or 0 - 100)

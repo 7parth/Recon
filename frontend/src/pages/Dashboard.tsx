@@ -92,7 +92,7 @@ export function Dashboard() {
     logoColor: '#4285F4',
   }));
 
-  const pipelineSteps = getSteps(runStatus?.current_step, runStatus?.status);
+  const pipelineSteps = getSteps((runStatus as any)?.current_step, runStatus?.status);
 
   return (
     <div className={styles.page}>
@@ -120,15 +120,15 @@ export function Dashboard() {
             <PipelineRun
               jobTitle={runStatus.job_title || 'Unknown Job'}
               company={runStatus.company || 'Unknown Company'}
-              location={runStatus.location || 'Remote'}
+              location={'Remote'}
               runId={runStatus.thread_id}
-              startedAgo={new Date(runStatus.started_at).toLocaleTimeString()}
-              status={runStatus.status === 'pending_review' ? 'in_review' : runStatus.status as any}
+              startedAgo={runStatus.started_at ? new Date(runStatus.started_at).toLocaleTimeString() : '—'}
+              status={runStatus.status === 'awaiting_review' ? 'in_review' : runStatus.status as any}
               steps={pipelineSteps}
               matchScore={runStatus.match_score || 0}
               topSkills={['Python', 'React', 'TypeScript']} // Wait for backend to supply these
               whatsNext={
-                runStatus.status === 'pending_review'
+                runStatus.status === 'awaiting_review'
                   ? 'Please review the tailored resume and cover letter. You can approve, request changes, or provide feedback.'
                   : runStatus.status === 'running' ? 'Pipeline is running. Please wait for completion.' : 'Pipeline finished.'
               }

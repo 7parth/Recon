@@ -66,7 +66,7 @@ class UserRepository:
             record = UserSettingsRecord(
                 user_id=user_id,
                 match_threshold=70,
-                nvidia_model="meta/llama-4-scout-17b-16e-instruct",
+                nvidia_model="meta/llama-4-maverick-17b-128e-instruct",   # matches config.py default
                 embedding_model="sentence-transformers/all-MiniLM-L6-v2",
                 auto_apply=False,
                 enable_notifications=True,

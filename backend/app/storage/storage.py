@@ -106,8 +106,11 @@ class BaseStorage:
 
         The Supabase SDK computes this deterministically from the project URL
         and bucket name — no round-trip required.
+
+        Note: get_public_url() is synchronous in supabase-py v2 (returns str
+        directly). Do NOT await it — that would raise TypeError.
         """
-        return await (
+        return (
             self._client.storage
             .from_(self._bucket)
             .get_public_url(path)

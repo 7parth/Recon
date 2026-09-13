@@ -40,6 +40,7 @@ class ApplicationRepository:
         job_id: uuid.UUID | None = None,
         company_id: uuid.UUID | None = None,
         resume_storage_url: str | None = None,
+        status: str = "running",
     ) -> ApplicationRecord:
         """Insert a new ApplicationRecord and return it."""
         record = ApplicationRecord(
@@ -48,7 +49,7 @@ class ApplicationRepository:
             job_id=job_id,
             company_id=company_id,
             resume_storage_url=resume_storage_url,
-            status="pending_review",
+            status=status,
         )
         self._session.add(record)
         await self._session.flush()  # populate id without committing

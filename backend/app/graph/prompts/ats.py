@@ -22,6 +22,10 @@ Produce the following output:
 - recommendations: a concise paragraph listing the most important keywords or \
   phrases missing from the resume that the candidate should incorporate. \
   Be specific — name the exact terms, not generic advice.
+- matched_keywords: a list of skill/keyword strings from the required list that \
+  ARE present in the resume (exact or close match).
+- missing_keywords: a list of skill/keyword strings from the required list that \
+  are NOT present in the resume and should be added.
 
 Respond ONLY with valid JSON matching the schema. No commentary."""
 

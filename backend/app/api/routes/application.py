@@ -120,8 +120,8 @@ async def start_run(
         await repo.create(
             thread_id=thread_id,
             resume_storage_url=body.resume_storage_url,
+            status="running",
         )
-        await repo.update_status(thread_id, status="running")
 
     if use_celery:
         # ── Celery path: durable, survives server restarts ────────────────
@@ -179,9 +179,27 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
     """
     config = {"configurable": {"thread_id": thread_id}}
 
+    # Fetch user settings to wire match_score_threshold into graph state.
+    # Threshold is stored as an int (0-100) in the DB; graph expects 0.0-1.0.
+    # Falls back to None (graph uses its default constant 0.65) if fetch fails.
+    match_score_threshold: float | None = None
+    try:
+        async with get_async_session() as session:
+            from app.db.repositories.user_repository import UserRepository
+            user_repo = UserRepository(session)
+            user_settings = await user_repo.get_settings()
+            if user_settings.match_threshold is not None:
+                match_score_threshold = user_settings.match_threshold / 100.0
+    except Exception as settings_err:
+        logger.warning(
+            "_run_graph: could not load user settings (using default threshold): %s", settings_err
+        )
+
     initial_state = {
+        "thread_id": thread_id,           # wired so apply_agent can tag SSE logs
         "resume_raw": resume_text,
         "job_url": job_url,
+        "match_score_threshold": match_score_threshold,  # from user settings; None → default 0.65
         "resume_profile": None,
         "job_profile": None,
         "company_profile": None,
@@ -245,8 +263,9 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
             from app.vectorstore.indexing import index_resume
             import asyncio
 
-            loop = asyncio.get_event_loop()
-            loop.create_task(index_resume(thread_id=thread_id, resume_text=resume_text))
+            asyncio.get_running_loop().create_task(
+                index_resume(thread_id=thread_id, resume_text=resume_text)
+            )
         except Exception as idx_err:
             logger.warning("_run_graph: pgvector indexing failed (non-fatal): %s", idx_err)
     except Exception as e:
@@ -284,5 +303,9 @@ async def get_run_status(thread_id: str):
             status=api_status,
             submission_status=run.status if run.status in ("applied", "skipped", "failed") else None,
             error=run.error_message,
+            job_title=run.job_title,
+            company=run.company_name,
+            match_score=run.match_score,
+            started_at=run.created_at,
         )
 

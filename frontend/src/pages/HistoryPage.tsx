@@ -136,7 +136,7 @@ function buildTimeline(r: ApplicationRecord & { rejection_feedback?: string }): 
 }
 
 /* ── Expandable run row ── */
-function RunRow({ record }: { record: ApplicationRecord & { rejection_feedback?: string } }) {
+function RunRow({ record }: { record: ApplicationRecord & { rejection_feedback?: string | null } }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any>(null);

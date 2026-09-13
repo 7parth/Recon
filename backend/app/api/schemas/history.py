@@ -116,7 +116,7 @@ class ApplicationRecordDB(BaseModel):
             rejection_feedback=self.rejection_feedback,
             error_message=self.error_message,
             created_at=self.created_at,
-            updated_at=self.updated_at,
+            updated_at=self.updated_at,  # was missing — caused Pydantic validation error on every /history request
         )
 
 

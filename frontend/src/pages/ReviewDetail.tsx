@@ -66,10 +66,10 @@ export function ReviewDetail() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logo}>{(payload.company || payload.company_name || '?').charAt(0).toUpperCase()}</div>
+          <div className={styles.logo}>{(payload.company_name || '?').charAt(0).toUpperCase()}</div>
           <div className={styles.jobInfo}>
             <h1 className={styles.jobTitle}>{payload.job_title || 'Untitled Job'}</h1>
-            <p className={styles.companyMeta}>{payload.company || payload.company_name || 'Unknown Company'} · {payload.location || 'Remote'}</p>
+            <p className={styles.companyMeta}>{payload.company_name || 'Unknown Company'} · {'Remote'}</p>
           </div>
         </div>
         
