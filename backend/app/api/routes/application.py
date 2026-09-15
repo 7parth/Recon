@@ -176,9 +176,10 @@ async def start_run(
 async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
     """
     Execute the LangGraph graph in the background asynchronously.
-    """
-    config = {"configurable": {"thread_id": thread_id}}
 
+    Delegates the core graph invocation + DB status updates to
+    ``pipeline_service.run_single_job``, then chains pgvector indexing.
+    """
     # Fetch user settings to wire match_score_threshold into graph state.
     # Threshold is stored as an int (0-100) in the DB; graph expects 0.0-1.0.
     # Falls back to None (graph uses its default constant 0.65) if fetch fails.
@@ -195,84 +196,30 @@ async def _run_graph(thread_id: str, resume_text: str, job_url: str, graph):
             "_run_graph: could not load user settings (using default threshold): %s", settings_err
         )
 
-    initial_state = {
-        "thread_id": thread_id,           # wired so apply_agent can tag SSE logs
-        "resume_raw": resume_text,
-        "job_url": job_url,
-        "match_score_threshold": match_score_threshold,  # from user settings; None → default 0.65
-        "resume_profile": None,
-        "job_profile": None,
-        "company_profile": None,
-        "match_result": None,
-        "ats_report": None,
-        "tailored_resume": None,
-        "cover_letter": None,
-        "approval_status": "pending",
-        "rejection_feedback": None,
-        "submission_status": None,
-        "error": None,
-    }
+    from app.services.pipeline_service import run_single_job
 
+    outcome = await run_single_job(
+        thread_id=thread_id,
+        resume_text=resume_text,
+        job_url=job_url,
+        match_score_threshold=match_score_threshold,
+        approval_status="pending",
+        graph=graph,
+    )
+
+    logger.info("_run_graph: thread=%s finished with outcome=%s", thread_id, outcome)
+
+    # ── Index resume in pgvector for similarity search ────────────────────
+    # Fire-and-forget async task. Errors here are non-fatal.
     try:
-        final_state = await graph.ainvoke(initial_state, config=config)
+        from app.vectorstore.indexing import index_resume
+        import asyncio
 
-        submission_status = final_state.get("submission_status")
-        error = final_state.get("error")
-
-        # Extract display metadata from graph state for history endpoint
-        job_profile = final_state.get("job_profile")
-        company_profile = final_state.get("company_profile")
-        match_result = final_state.get("match_result")
-
-        job_title: str | None = getattr(job_profile, "job_title", None) if job_profile else None
-        company_name: str | None = getattr(company_profile, "name", None) if company_profile else None
-        match_score: float | None = getattr(match_result, "overall_score", None) if match_result else None
-
-        async with get_async_session() as session:
-            repo = ApplicationRepository(session)
-            # Persist display fields (job title, company, match score)
-            if any(v is not None for v in (job_title, company_name, match_score)):
-                await repo.update_display_fields(
-                    thread_id,
-                    job_title=job_title,
-                    company_name=company_name,
-                    match_score=match_score,
-                )
-            if submission_status:
-                # submission_status is "applied", "skipped", or "failed"
-                await repo.update_status(
-                    thread_id, 
-                    status=submission_status, 
-                    error_message=error
-                )
-            else:
-                # Paused at HUMAN_REVIEW interrupt
-                await repo.update_status(thread_id, status="pending_review")
-
-        logger.info(
-            "_run_graph: thread=%s finished | submission=%s | job=%s | company=%s",
-            thread_id,
-            submission_status,
-            job_title,
-            company_name,
+        asyncio.get_running_loop().create_task(
+            index_resume(thread_id=thread_id, resume_text=resume_text)
         )
-
-        # ── Index resume in pgvector for similarity search ────────────────
-        # Fire-and-forget async task. Errors here are non-fatal.
-        try:
-            from app.vectorstore.indexing import index_resume
-            import asyncio
-
-            asyncio.get_running_loop().create_task(
-                index_resume(thread_id=thread_id, resume_text=resume_text)
-            )
-        except Exception as idx_err:
-            logger.warning("_run_graph: pgvector indexing failed (non-fatal): %s", idx_err)
-    except Exception as e:
-        logger.error("_run_graph: thread=%s raised exception: %s", thread_id, e)
-        async with get_async_session() as session:
-            repo = ApplicationRepository(session)
-            await repo.update_status(thread_id, status="failed", error_message=str(e))
+    except Exception as idx_err:
+        logger.warning("_run_graph: pgvector indexing failed (non-fatal): %s", idx_err)
 
 
 # ── Status polling endpoint ───────────────────────────────────────────────────

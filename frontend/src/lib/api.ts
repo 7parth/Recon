@@ -3,7 +3,16 @@ import type {
   ApplicationRecord,
   ReviewPayload,
   JobSearchResult,
+  DiscoveryPreferences,
+  DiscoverySession,
 } from './types';
+
+export interface DiscoveryPreferencesUpdate {
+  target_role?: string;
+  preferred_locations?: string[];
+  excluded_companies?: string[];
+  max_jobs_per_session?: number;
+}
 
 const BASE = '/api/v1';
 
@@ -134,6 +143,34 @@ export const api = {
         context?: string;
       }[];
     }>(`/runs/${threadId}/logs`),
+
+  // ── Discovery ─────────────────────────────────────────────────────────────────
+  getDiscoveryPreferences: () =>
+    request<DiscoveryPreferences>('/discovery/preferences'),
+
+  updateDiscoveryPreferences: (body: DiscoveryPreferencesUpdate) =>
+    request<DiscoveryPreferences>('/discovery/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+
+  startDiscoverySession: () =>
+    request<{ session_id: string; session_status: string; message: string }>(
+      '/discovery/sessions',
+      { method: 'POST' }
+    ),
+
+  listDiscoverySessions: () =>
+    request<DiscoverySession[]>('/discovery/sessions'),
+
+  getDiscoverySession: (sessionId: string) =>
+    request<DiscoverySession>(`/discovery/sessions/${sessionId}`),
+
+  cancelDiscoverySession: (sessionId: string) =>
+    request<{ session_id: string; session_status: string }>(
+      `/discovery/sessions/${sessionId}/cancel`,
+      { method: 'POST' }
+    ),
 
   // ── LinkedIn auth ─────────────────────────────────────────────────────────────
   getLinkedInStatus: () =>

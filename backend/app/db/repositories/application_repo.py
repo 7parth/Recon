@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import distinct, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.application import ApplicationRecord
@@ -41,6 +41,8 @@ class ApplicationRepository:
         company_id: uuid.UUID | None = None,
         resume_storage_url: str | None = None,
         status: str = "running",
+        job_url: str | None = None,
+        discovery_session_id: uuid.UUID | None = None,
     ) -> ApplicationRecord:
         """Insert a new ApplicationRecord and return it."""
         record = ApplicationRecord(
@@ -50,6 +52,8 @@ class ApplicationRepository:
             company_id=company_id,
             resume_storage_url=resume_storage_url,
             status=status,
+            job_url=job_url,
+            discovery_session_id=discovery_session_id,
         )
         self._session.add(record)
         await self._session.flush()  # populate id without committing
@@ -153,6 +157,29 @@ class ApplicationRepository:
             .values(**values)
         )
         return await self.get_by_thread_id(thread_id)
+
+    async def list_all_job_urls(
+        self,
+        user_id: str | None = None,  # noqa: ARG002 — reserved for future multi-user support
+    ) -> set[str]:
+        """Return the set of all distinct job URLs already in the applications table.
+
+        Used by ``JobDeduplicator`` at discovery-session start so it can skip
+        jobs that have been processed in previous runs (R3.2).
+
+        Parameters
+        ----------
+        user_id:
+            Reserved for future multi-user scoping.  ``ApplicationRecord`` does
+            not carry a ``user_id`` column directly, so this argument is
+            accepted for API compatibility but currently ignored.
+        """
+        result = await self._session.execute(
+            select(distinct(ApplicationRecord.job_url)).where(
+                ApplicationRecord.job_url.isnot(None)
+            )
+        )
+        return {row for (row,) in result.all()}
 
     async def set_document_urls(
         self,

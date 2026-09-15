@@ -4,8 +4,8 @@ workers/application_tasks.py — Celery task for running the LangGraph pipeline.
 Task:
   run_application_pipeline(thread_id, resume_text, job_url, resume_storage_url)
       Executes the full LangGraph graph run in a Celery worker process.
-      Mirrors the logic in api/routes/application._run_graph() but runs
-      in a background Celery worker instead of a FastAPI BackgroundTask.
+      Delegates the core graph invocation to ``pipeline_service.run_single_job``
+      then chains pgvector indexing via ``index_resume_task``.
 
 Why move to Celery?
   - FastAPI BackgroundTasks share the uvicorn process. If uvicorn restarts,
@@ -30,6 +30,7 @@ from app.services.checkpoint_service import get_checkpointer
 from app.graph.builder import build_graph
 from app.db.database import get_async_session
 from app.db.repositories.application_repo import ApplicationRepository
+from app.db.repositories.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -107,73 +108,41 @@ async def _run_pipeline_async(
     """
     Async core of run_application_pipeline.
 
-    Runs in a fresh asyncio event loop (via asyncio.run()).
-    Builds a fresh graph + checkpointer for this worker process.
+    Builds a fresh graph + checkpointer for this worker process, then
+    delegates graph invocation + DB updates to ``pipeline_service.run_single_job``.
     """
-    config = {"configurable": {"thread_id": thread_id}}
+    from app.services.pipeline_service import run_single_job
 
-    initial_state = {
-        "resume_raw": resume_text,
-        "job_url": job_url,
-        "resume_profile": None,
-        "job_profile": None,
-        "company_profile": None,
-        "match_result": None,
-        "ats_report": None,
-        "tailored_resume": None,
-        "cover_letter": None,
-        "approval_status": "pending",
-        "rejection_feedback": None,
-        "submission_status": None,
-        "error": None,
-    }
-
+    # Fetch user settings to wire match_score_threshold into graph state.
+    # Threshold is stored as an int (0-100) in the DB; graph expects 0.0-1.0.
+    # Falls back to None (graph uses its default constant 0.65) if fetch fails.
+    match_score_threshold: float | None = None
     try:
-        async with get_checkpointer() as checkpointer:
-            graph = build_graph(checkpointer=checkpointer)
-            final_state = await graph.ainvoke(initial_state, config=config)
-
-        submission_status = final_state.get("submission_status")
-        error = final_state.get("error")
-
-        job_profile = final_state.get("job_profile")
-        company_profile = final_state.get("company_profile")
-        match_result = final_state.get("match_result")
-
-        job_title: str | None = getattr(job_profile, "job_title", None) if job_profile else None
-        company_name: str | None = getattr(company_profile, "name", None) if company_profile else None
-        match_score: float | None = getattr(match_result, "overall_score", None) if match_result else None
-
         async with get_async_session() as session:
-            repo = ApplicationRepository(session)
-            if any(v is not None for v in (job_title, company_name, match_score)):
-                await repo.update_display_fields(
-                    thread_id,
-                    job_title=job_title,
-                    company_name=company_name,
-                    match_score=match_score,
-                )
-            if submission_status:
-                await repo.update_status(thread_id, status=submission_status, error_message=error)
-            else:
-                # Paused at HUMAN_REVIEW interrupt
-                await repo.update_status(thread_id, status="pending_review")
-
-        final_db_status = submission_status or "pending_review"
-        logger.info(
-            "run_application_pipeline: done thread_id=%s status=%s",
-            thread_id,
-            final_db_status,
+            user_repo = UserRepository(session)
+            user_settings = await user_repo.get_settings()
+            if user_settings.match_threshold is not None:
+                match_score_threshold = user_settings.match_threshold / 100.0
+    except Exception as settings_err:
+        logger.warning(
+            "_run_pipeline_async: could not load user settings (using default threshold): %s",
+            settings_err,
         )
-        return {"status": final_db_status, "thread_id": thread_id}
 
-    except Exception as e:
-        logger.error(
-            "run_application_pipeline: thread_id=%s raised exception: %s",
-            thread_id,
-            e,
+    async with get_checkpointer() as checkpointer:
+        graph = build_graph(checkpointer=checkpointer)
+        outcome = await run_single_job(
+            thread_id=thread_id,
+            resume_text=resume_text,
+            job_url=job_url,
+            match_score_threshold=match_score_threshold,
+            approval_status="pending",
+            graph=graph,
         )
-        async with get_async_session() as session:
-            repo = ApplicationRepository(session)
-            await repo.update_status(thread_id, status="failed", error_message=str(e))
-        return {"status": "failed", "thread_id": thread_id, "error": str(e)}
+
+    logger.info(
+        "run_application_pipeline: done thread_id=%s status=%s",
+        thread_id,
+        outcome,
+    )
+    return {"status": outcome, "thread_id": thread_id}

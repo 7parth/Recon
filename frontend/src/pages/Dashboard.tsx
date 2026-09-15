@@ -1,15 +1,19 @@
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Briefcase, CheckCircle, Clock, XCircle, TrendingUp } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
 import { PipelineRun } from '../components/dashboard/PipelineRun';
 import { ReviewQueue } from '../components/dashboard/ReviewQueue';
+import { DiscoverySessionCard } from '../components/dashboard/DiscoverySessionCard';
 import { ApplicationsTable } from '../components/dashboard/ApplicationsTable';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { usePipelineRun } from '../hooks/usePipelineRun';
+import { api } from '../lib/api';
 import styles from './Dashboard.module.css';
 import type { PipelineStep } from '../components/dashboard/PipelineStepper';
 import type { BadgeVariant } from '../components/ui/Badge';
+import type { DiscoverySession } from '../lib/types';
 
 function getSteps(currentStep?: string, status?: string): PipelineStep[] {
   const stepsList = [
@@ -59,6 +63,14 @@ export function Dashboard() {
 
   const { history, stats } = useDashboardData();
   const { runStatus } = usePipelineRun(threadId);
+
+  const [latestSession, setLatestSession] = useState<DiscoverySession | null>(null);
+
+  useEffect(() => {
+    api.listDiscoverySessions()
+      .then((sessions) => setLatestSession(sessions[0] ?? null))
+      .catch(() => setLatestSession(null));
+  }, []);
 
   const STATS_DATA = [
     { label: 'Applications', value: stats.total_applications, sub: 'Total applied', icon: <Briefcase size={20} />, color: 'var(--color-accent)' },
@@ -144,6 +156,7 @@ export function Dashboard() {
         </div>
         <div className={styles.rightColumn}>
           <ReviewQueue items={queueItems} total={queueItems.length} />
+          <DiscoverySessionCard session={latestSession} />
           <ActivityTimeline events={TIMELINE_EVENTS} />
         </div>
       </div>

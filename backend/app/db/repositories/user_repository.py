@@ -83,8 +83,7 @@ class UserRepository:
         update_data = data.model_dump(exclude_unset=True)
 
         for key, value in update_data.items():
-            if value is not None:
-                setattr(settings, key, value)
+            setattr(settings, key, value)
 
         await self._session.flush()
         return settings

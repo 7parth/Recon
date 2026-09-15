@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+
+if TYPE_CHECKING:
+    from app.db.models.discovery import DiscoverySessionRecord
 
 
 class ApplicationRecord(Base):
@@ -118,6 +122,20 @@ class ApplicationRecord(Base):
         comment="Blended match score (0.0–1.0) from match_agent",
     )
 
+    # ── Discovery ─────────────────────────────────────────────────────────────
+    job_url: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Source URL of the job posting — populated by the discovery pipeline",
+    )
+    discovery_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("discovery_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="FK to discovery_sessions — NULL for ad-hoc runs",
+    )
+
     # ── Storage URLs (documents live in Supabase Storage, not in this table) ─
     resume_storage_url: Mapped[str | None] = mapped_column(
         Text,
@@ -158,4 +176,11 @@ class ApplicationRecord(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         server_default="now()",
         nullable=False,
+    )
+
+    # ── Relationships ─────────────────────────────────────────────────────────
+    discovery_session: Mapped[DiscoverySessionRecord | None] = relationship(
+        "DiscoverySessionRecord",
+        back_populates="applications",
+        foreign_keys=[discovery_session_id],
     )

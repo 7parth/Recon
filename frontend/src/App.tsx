@@ -15,6 +15,7 @@ import { SavedJobsPage } from './pages/SavedJobsPage';
 import { AutomationLogsPage } from './pages/AutomationLogsPage';
 import { ATSPlatformsPage } from './pages/ATSPlatformsPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { DiscoveryPage } from './pages/DiscoveryPage';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="keywords" element={<KeywordsPage />} />
           <Route path="jobs/search" element={<JobSearchPage />} />
           <Route path="jobs/saved" element={<SavedJobsPage />} />
+          <Route path="discovery" element={<DiscoveryPage />} />
           <Route path="automation/ats" element={<ATSPlatformsPage />} />
           <Route path="automation/logs" element={<AutomationLogsPage />} />
           <Route path="settings" element={<SettingsPage />} />

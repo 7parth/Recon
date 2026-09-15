@@ -106,3 +106,41 @@ export interface StatSummary {
   skipped_failed: number;
   avg_match_score: number;
 }
+
+/**
+ * SessionStatus — mirrors backend discovery session status values.
+ */
+export type SessionStatus =
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'completed_with_errors';
+
+/**
+ * DiscoveryPreferences — mirrors backend DiscoveryPreferencesResponse schema.
+ */
+export interface DiscoveryPreferences {
+  target_role: string;
+  preferred_locations: string[];
+  excluded_companies: string[];
+  max_jobs_per_session: number;
+  updated_at: string | null;
+}
+
+/**
+ * DiscoverySession — mirrors backend DiscoverySessionResponse schema.
+ * Counter fields are populated progressively as the session runs.
+ */
+export interface DiscoverySession {
+  session_id: string;
+  session_status: SessionStatus;
+  jobs_found: number;
+  jobs_processed: number;
+  jobs_pending_review: number;
+  jobs_applied: number;
+  jobs_skipped: number;
+  jobs_failed: number;
+  started_at: string;
+  completed_at: string | null;
+}

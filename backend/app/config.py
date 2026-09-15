@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     environment: str = Field("development", description="development | production")
     log_level: str = Field("INFO", description="Python logging level")
 
+    # ── Discovery ─────────────────────────────────────────────────────────────
+    discovery_schedule_utc_hour: int = Field(
+        9,
+        ge=0,
+        le=23,
+        description="UTC hour (0–23) for daily discovery trigger",
+    )
+
     # ── Celery / Redis ────────────────────────────────────────────────────────
     celery_broker_url: str = Field(
         "redis://localhost:6379/0",

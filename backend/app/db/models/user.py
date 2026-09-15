@@ -101,6 +101,7 @@ class UserSettingsRecord(Base):
     embedding_model: Mapped[str] = mapped_column(String(255), nullable=False, default="sentence-transformers/all-MiniLM-L6-v2")
     auto_apply: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enable_notifications: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_discover: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

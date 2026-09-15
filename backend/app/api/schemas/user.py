@@ -34,6 +34,7 @@ class UserSettingsResponse(BaseModel):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     auto_apply: bool = False
     enable_notifications: bool = True
+    auto_discover: bool = False
 
 
 class UserSettingsUpdate(BaseModel):
@@ -42,3 +43,4 @@ class UserSettingsUpdate(BaseModel):
     embedding_model: Optional[str] = None
     auto_apply: Optional[bool] = None
     enable_notifications: Optional[bool] = None
+    auto_discover: Optional[bool] = None

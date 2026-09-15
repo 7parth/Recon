@@ -52,3 +52,16 @@ class ResumeRepository:
             select(ResumeRecord).where(ResumeRecord.id == record_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_latest(self) -> ResumeRecord | None:
+        """Return the most recently uploaded resume record, or None if none exist.
+
+        Used by the discovery orchestrator to load resume text at session start
+        without needing a specific ``resume_id`` reference.
+        """
+        result = await self._session.execute(
+            select(ResumeRecord)
+            .order_by(ResumeRecord.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()

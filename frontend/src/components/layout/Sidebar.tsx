@@ -9,6 +9,7 @@ import {
   Tag,
   Search,
   Bookmark,
+  Radar,
   Settings2,
   ScrollText,
   Settings,
@@ -79,6 +80,7 @@ export function Sidebar() {
       items: [
         { to: '/jobs/search', label: 'Search Jobs', icon: <Search size={16} strokeWidth={1.5} /> },
         { to: '/jobs/saved', label: 'Saved Jobs', icon: <Bookmark size={16} strokeWidth={1.5} /> },
+        { to: '/discovery', label: 'Discovery', icon: <Radar size={16} strokeWidth={1.5} /> },
       ],
     },
     {

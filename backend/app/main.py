@@ -16,7 +16,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, application, review, jobs, history, logs, user, linkedin
+from app.api.routes import health, application, review, jobs, history, logs, user, linkedin, discovery
 
 # ── Logging configuration ─────────────────────────────────────────────────────
 # Configure once at startup — all modules use logging.getLogger(__name__)
@@ -47,15 +47,24 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app_instance: FastAPI):
+        from app.discovery.scheduler import init_scheduler
+
         logger.info("Recon API starting up...")
         logger.info("Docs available at http://localhost:8000/docs")
-        
+
+        scheduler = None
+
         # Initialize LangGraph Checkpoint Service (Supabase Postgres)
         # Fall back to MemorySaver if Postgres is unavailable or authentication fails
         try:
             async with get_checkpointer() as checkpointer:
                 app_instance.state.checkpointer = checkpointer
                 app_instance.state.graph = build_graph(checkpointer=checkpointer)
+
+                # Start the APScheduler daily discovery job after graph is ready
+                # so trigger_scheduled_discovery can access app.state.graph.
+                scheduler = init_scheduler(app_instance)
+
                 yield
         except Exception as e:
             logger.warning(
@@ -67,7 +76,16 @@ def create_app() -> FastAPI:
             memory_cp = MemorySaver()
             app_instance.state.checkpointer = memory_cp
             app_instance.state.graph = build_graph(checkpointer=memory_cp)
+
+            # Start scheduler even when using fallback checkpointer
+            scheduler = init_scheduler(app_instance)
+
             yield
+        finally:
+            # Shut down the scheduler gracefully on exit
+            if scheduler is not None and scheduler.running:
+                scheduler.shutdown(wait=False)
+                logger.info("APScheduler shut down")
 
         logger.info("Recon API shutting down")
 
@@ -106,6 +124,7 @@ def create_app() -> FastAPI:
     app.include_router(logs.router,        prefix="/api/v1") # GET  /api/v1/runs/{id}/logs[/stream]
     app.include_router(user.router,        prefix="/api/v1") # GET/PUT /api/v1/user/profile & /settings
     app.include_router(linkedin.router,    prefix="/api/v1") # GET /api/v1/linkedin/auth/status, POST /api/v1/linkedin/auth/init
+    app.include_router(discovery.router,   prefix="/api/v1") # GET/PUT /api/v1/discovery/preferences, POST /api/v1/discovery/sessions, etc.
 
     return app
 

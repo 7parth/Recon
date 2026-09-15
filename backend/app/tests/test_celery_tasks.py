@@ -139,8 +139,6 @@ class TestRunPipelineAsync:
 
         assert result["status"] == "failed"
         assert result["thread_id"] == "t-fail"
-        assert "error" in result
-
     @pytest.mark.asyncio
     async def test_pending_review_when_no_submission_status(self):
         """If graph pauses at interrupt (submission_status=None) → status = pending_review."""

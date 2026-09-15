@@ -6,7 +6,8 @@ query the DB directly from agent functions or route handlers.
 """
 
 from app.db.repositories.application_repo import ApplicationRepository
+from app.db.repositories.discovery_repo import DiscoveryRepository
 from app.db.repositories.job_repo import JobRepository
 from app.db.repositories.resume_repo import ResumeRepository
 
-__all__ = ["ApplicationRepository", "JobRepository", "ResumeRepository"]
+__all__ = ["ApplicationRepository", "DiscoveryRepository", "JobRepository", "ResumeRepository"]
