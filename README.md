@@ -6,6 +6,12 @@ Recon is an AI agent that reads your resume, finds jobs, scores fit, tailors you
 
 ---
 
+## About
+
+Recon is an end-to-end AI job application assistant built around a multi-agent LangGraph workflow. It automates resume parsing, job matching, ATS optimization, application tailoring, and ATS form submission while enforcing a mandatory human approval step before any application is sent.
+
+---
+
 ## How It Works
 
 ```
